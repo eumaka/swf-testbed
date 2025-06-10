@@ -60,7 +60,7 @@ for the ePIC streaming workflow testbed project.
 
 The repositories mapping to testbed components are:
 
-### [swf-monitor](../swf-monitor)
+### [swf-monitor](https://github.com/BNLNPPS/swf-monitor)
 
 This is a web service providing system monitoring and comprehensive
 information about the testbed's state, both via browser-based dashboards and a
@@ -78,7 +78,7 @@ for other agents in the system to report status and retrieve information.
   messages.
 - Interfaces with OpenSearch/Grafana for monitoring dashboards.
 
-### [swf-daqsim-agent](../swf-daqsim-agent)
+### [swf-daqsim-agent](https://github.com/BNLNPPS/swf-daqsim-agent)
 
 This is the information agent designed to simulate the Data Acquisition (DAQ)
 system and other EIC machine and ePIC detector influences on streaming
@@ -90,7 +90,7 @@ activity within the testbed.
 - Base it on the [pysim](https://pypi.org/project/pysim/) dynamical system
   modeler.
 
-### [swf-data-agent](../swf-data-agent)
+### [swf-data-agent](https://github.com/BNLNPPS/swf-data-agent)
 
 This is the central data handling agent within the testbed. It will listen to
 the swf-daqsim-agent, manage Rucio subscriptions of run datasets and STF
@@ -103,7 +103,7 @@ stalls or anomalies.
 
 - Interactions with Rucio are consolidated in this agent.
 
-### [swf-processing-agent](../swf-processing-agent)
+### [swf-processing-agent](https://github.com/BNLNPPS/swf-processing-agent)
 
 This is the prompt processing agent that configures and submits PanDA
 processing jobs to execute the streaming workflows of the testbed.
@@ -112,7 +112,7 @@ processing jobs to execute the streaming workflows of the testbed.
 
 - Interactions with PanDA are consolidated in this agent.
 
-### [swf-fastmon-agent](../swf-fastmon-agent)
+### [swf-fastmon-agent](https://github.com/BNLNPPS/swf-fastmon-agent)
 
 This is the fast monitoring agent designed to consume (fractions of) STF data
 for quick, near real-time monitoring. This agent will reside at E1 and perform
@@ -120,7 +120,7 @@ remote data reads from STF files in the DAQ exit buffer, skimming a fraction
 of the data of interest for fast monitoring. The agent will be notified of new
 STF availability by the swf-data-agent.
 
-### [swf-mcp-agent](../swf-mcp-agent)
+### [swf-mcp-agent](https://github.com/BNLNPPS/swf-mcp-agent)
 
 #### Implementation notes
 
