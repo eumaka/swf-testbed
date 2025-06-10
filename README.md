@@ -2,32 +2,50 @@
 
 This is the umbrella repository for the ePIC streaming workflow testbed.
 
-The testbed plan is based on ePIC streaming computing model WG discussions in the streaming computing model meeting[^1], guided by the ePIC streaming computing model report[^2], and the ePIC workflow management system requirements draft[^3].
+The testbed plan is based on ePIC streaming computing model WG discussions
+in the streaming computing model meeting[^1], guided by the ePIC streaming
+computing model report[^2], and the ePIC workflow management system
+requirements draft[^3].
 
 ## Testbed plan
 
-The testbed will prototype the ePIC streaming computing model's workflows and dataflows from Echelon 0 (E0) egress (the DAQ exit buffer)
-through the processing that takes place at the two Echelon 1 computing facilities at BNL and JLab.
+The testbed will prototype the ePIC streaming computing model's workflows and
+dataflows from Echelon 0 (E0) egress (the DAQ exit buffer)
+through the processing that takes place at the two Echelon 1 computing
+facilities at BNL and JLab.
 
-The testbed scope, timeline and workplan are described in a planning document[^4]. Detailed progress tracking and development discussion is in a progress document[^5].
+The testbed scope, timeline and workplan are described in a planning
+document[^4]. Detailed progress tracking and development discussion is in a
+progress document[^5].
 
-See the E0-E1 overview slide deck [^6] for more information on the E0-E1 workflow and dataflow.
-For a schematic of the system the testbed targets see slide 4 (from the blue DAQ external subnet rightwards).
+See the E0-E1 overview slide deck [^6] for more information on the E0-E1
+workflow and dataflow.
+For a schematic of the system the testbed targets see slide 4 (from the blue
+DAQ external subnet rightwards).
 
 ## Design and implementation
 
 Overall system design and implementation notes:
 
 - The implementation language will be Python 3.
-- Testbed modules will be implemented as a set of loosely coupled agents, each with a specific role in the system.
-- The agents will communicate via messaging, using ActiveMQ as the message broker.
-- The PanDA [^7] distributed workload management system and its ancillary components will be used for workflow orchestration and workload execution.
-- The Rucio [^8] distributed data management system will be used for management and distribution of data and associated metadata, in close orchestration with PanDA.
-- High quality monitoring and centralized management of system data (metadata, bookkeeping, logs etc.) will be a primary design goal. Monitoring and system data gathering and distribution will be implemented via a web service backed by a relational database, with a REST API for data access and reporting.
+- Testbed modules will be implemented as a set of loosely coupled agents, each
+  with a specific role in the system.
+- The agents will communicate via messaging, using ActiveMQ as the message
+  broker.
+- The PanDA [^7] distributed workload management system and its ancillary
+  components will be used for workflow orchestration and workload execution.
+- The Rucio [^8] distributed data management system will be used for
+  management and distribution of data and associated metadata, in close
+  orchestration with PanDA.
+- High quality monitoring and centralized management of system data (metadata,
+  bookkeeping, logs etc.) will be a primary design goal. Monitoring and system
+  data gathering and distribution will be implemented via a web service backed
+  by a relational database, with a REST API for data access and reporting.
 
 ### Participants
 
-At present the testbed is a project of the Nuclear and Particle Physics Software (NPPS) group at BNL; collaborators are welcome.
+At present the testbed is a project of the Nuclear and Particle Physics
+Software (NPPS) group at BNL; collaborators are welcome.
 
 - Torre Wenaus (lead)
 - Maxim Potekhin
@@ -37,48 +55,112 @@ At present the testbed is a project of the Nuclear and Particle Physics Software
 
 ## Software organization
 
-The streaming workflow (swf prefix) set of repositories make up the software for the ePIC
-streaming workflow testbed project, development begun in June 2025.
-This swf-testbed repository serves as the umbrella repository for the testbed.
-It's the central place for documentation, overall configuration,
-and high-level project information.
+The streaming workflow (swf prefix) set of repositories make up the software
+for the ePIC streaming workflow testbed project.
 
 The repositories mapping to testbed components are:
 
-### swf-monitor
+### [swf-monitor](../swf-monitor)
 
-A web service providing system monitoring and comprehensive information about the testbed's state, both via browser-based dashboards and a json based REST API.
+This is a web service providing system monitoring and comprehensive
+information about the testbed's state, both via browser-based dashboards and a
+json based REST API.
 
-This module will manage the databases used by the testbed, and offer a REST API for other agents in the system to report status and retrieve information.
+This module will manage the databases used by the testbed, and offer a REST API
+for other agents in the system to report status and retrieve information.
 
-Implementation notes:
+#### Implementation notes
 
-### swf-daqsim-agent
+- Django-based web service providing a browser UI and a REST json API,
+  leveraging the PanDA monitor.
+- Postgres as the back end database, as for PanDA and Rucio.
+- Receives information from agents in the system via REST or ActiveMQ
+  messages.
+- Interfaces with OpenSearch/Grafana for monitoring dashboards.
 
-This is the information agent designed to simulate the Data Acquisition (DAQ) system and other EIC machine and ePIC detector influences on streaming processing.
-This dynamic simulator acts as the primary input and driver of activity within the testbed.
+### [swf-daqsim-agent](../swf-daqsim-agent)
 
-Implementation notes:
+This is the information agent designed to simulate the Data Acquisition (DAQ)
+system and other EIC machine and ePIC detector influences on streaming
+processing. This dynamic simulator acts as the primary input and driver of
+activity within the testbed.
 
-- Base it on the [pysim](https://pypi.org/project/pysim/) dynamical system modeler.
+#### Implementation notes
 
-### swf-data-agent
+- Base it on the [pysim](https://pypi.org/project/pysim/) dynamical system
+  modeler.
 
-This is the central data handling agent within the testbed.
-It will listen to the swf-daqsim-agent, manage Rucio subscriptions of run datasets and STF files, create new run datasets, and send messages to the swf-processing-agent for run processing and to the swf-fastmon-agent for new STF availability. It will also have a 'watcher' role to identify and report stalls or anomalies.
+### [swf-data-agent](../swf-data-agent)
 
-### swf-processing-agent
+This is the central data handling agent within the testbed. It will listen to
+the swf-daqsim-agent, manage Rucio subscriptions of run datasets and STF
+files, create new run datasets, and send messages to the
+swf-processing-agent for run processing and to the swf-fastmon-agent for new
+STF availability. It will also have a 'watcher' role to identify and report
+stalls or anomalies.
 
-This is the prompt processing agent that configures and submits PanDA processing jobs to execute the streaming workflows of the testbed.
+#### Implementation notes
 
-### swf-fastmon-agent
+- Interactions with Rucio are consolidated in this agent.
 
-This is the fast monitoring agent designed to consume (fractions of) STF data for quick, near real-time monitoring.
-This agent will reside at E1 and perform remote data reads from STF files in the DAQ exit buffer, skimming a fraction of the data of interest for fast monitoring. The agent will be notified of new STF availability by the swf-data-agent.
+### [swf-processing-agent](../swf-processing-agent)
+
+This is the prompt processing agent that configures and submits PanDA
+processing jobs to execute the streaming workflows of the testbed.
+
+#### Implementation notes
+
+- Interactions with PanDA are consolidated in this agent.
+
+### [swf-fastmon-agent](../swf-fastmon-agent)
+
+This is the fast monitoring agent designed to consume (fractions of) STF data
+for quick, near real-time monitoring. This agent will reside at E1 and perform
+remote data reads from STF files in the DAQ exit buffer, skimming a fraction
+of the data of interest for fast monitoring. The agent will be notified of new
+STF availability by the swf-data-agent.
+
+### [swf-mcp-agent](../swf-mcp-agent)
+
+#### Implementation notes
+
+- Note Paul's [ask-panda example](https://github.com/PalNilsson/ask-panda) of
+  MCP server and client
+
+## System infrastructure
+
+This repository hosts overall system infrastructure for the testbed software,
+including the following.
+
+### Agent process management
+
+The testbed agents will be managed by a process manager, which will be
+responsible for configuring, starting, stopping, and monitoring the agents.
+
+Implementation: try the python [supervisor](http://supervisord.org/) process
+manager.
+
+### Message broker
+
+The [ActiveMQ](https://activemq.apache.org/) message broker infrastructure will
+be hosted here, providing the messaging backbone for the testbed agents to
+communicate.
+
+#### Implementation notes
+
+- use [ActiveMQ Artemis](https://activemq.apache.org/components/artemis/)? A
+  *"next-generation message broker, designed as a high-performance,
+  non-blocking, and scalable alternative to ActiveMQ Classic. In essence,
+  ActiveMQ Artemis is a more modern and high-performance messaging broker
+  designed to address the needs of modern microservices and real-time
+  applications, while ActiveMQ Classic provides a more established and
+  feature-rich platform for traditional messaging use cases."* - Google search
 
 ## Glossary
 
-- STF: super time frame. A contiguous set of ~1000 TFs containing about ~0.6s of ePIC data, corresponding to ~2GB. The STF is the atomic unit of streaming data processing.
+- STF: super time frame. A contiguous set of ~1000 TFs containing about ~0.6s
+  of ePIC data, corresponding to ~2GB. The STF is the atomic unit of
+  streaming data processing.
 - TF: time frame. Atomic unit of ePIC detector readout ~0.6ms in duration.
 
 ## References
