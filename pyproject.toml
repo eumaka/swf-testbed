@@ -1,0 +1,22 @@
+[project]
+name = "swf-testbed"
+version = "0.1.0"
+description = "A meta-package to install and manage the ePIC Streaming Workflow Testbed."
+requires-python = ">=3.9"
+dependencies = [
+    # Dependencies from private GitHub Packages index
+    "swf-common-lib",
+    "swf-monitor",
+    "swf-daqsim-agent",
+    "swf-data-agent",
+    "swf-processing-agent",
+    "swf-fastmon-agent",
+    "swf-mcp-agent",
+    # CLI tool dependencies
+    "typer[all]", # Using typer[all] installs optional deps like rich
+    "supervisor"
+]
+
+[project.scripts]
+# This creates the `swf-testbed` command in the user's PATH
+swf-testbed = "swf_testbed_cli.main:app"
