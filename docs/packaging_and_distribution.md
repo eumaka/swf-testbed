@@ -316,3 +316,33 @@ pip install git+https://<TOKEN>@github.com/<OWNER>/<REPO_NAME>.git@<BRANCH_OR_TA
 
 This would need to be done for every single component, making it far more
 cumbersome for the end-user.
+
+# Packaging and Distribution
+
+## ⚠️ GitHub Packages Approach Deprecated
+
+> **Note:** The previous approach using GitHub Packages as a private Python package registry is now **deprecated** for this project. Persistent 404 errors and authentication issues were encountered, and the process was unreliable. The recommended and working approach is to use [TestPyPI](https://test.pypi.org/) for internal testing and PyPI for production releases.
+
+### Why Deprecated?
+- GitHub Packages Python registry is less mature and has confusing authentication requirements.
+- Error messages are often unhelpful (404/403) and difficult to debug.
+- TestPyPI and PyPI are the standard, well-supported Python package registries.
+
+### What to Use Instead
+- Use [TestPyPI](https://test.pypi.org/) for testing your packaging and publishing workflow.
+- Use [PyPI](https://pypi.org/) for production releases.
+- See [`publishing_to_testpypi.md`](publishing_to_testpypi.md) for the recommended procedure.
+
+---
+
+## Old GitHub Packages Instructions (for reference only)
+
+<details>
+<summary>Show legacy instructions</summary>
+
+- You must use a GitHub Personal Access Token (PAT) with `write:packages` and `repo` scopes.
+- In your `.pypirc`, use `username = __token__` and `password = <your-github-pat>`.
+- The package name in `pyproject.toml` must exactly match the repository name.
+- See [GitHub Packages documentation](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-python-registry) for more details.
+
+</details>
