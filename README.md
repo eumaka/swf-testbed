@@ -94,18 +94,14 @@ swf-processing-agent for run processing and to the swf-fastmon-agent for new
 STF availability. It also has a 'watcher' role to identify and report
 stalls or anomalies.
 
-#### Implementation notes
-
-- Interactions with Rucio are consolidated in this agent.
+Interactions with Rucio are consolidated in this agent.
 
 ### [swf-processing-agent](https://github.com/BNLNPPS/swf-processing-agent)
 
 This is the prompt processing agent that configures and submits PanDA
 processing jobs to execute the streaming workflows of the testbed.
 
-#### Implementation notes
-
-- Interactions with PanDA are consolidated in this agent.
+Interactions with PanDA are consolidated in this agent.
 
 ### [swf-fastmon-agent](https://github.com/BNLNPPS/swf-fastmon-agent)
 
@@ -117,10 +113,11 @@ STF availability by the swf-data-agent.
 
 ### [swf-mcp-agent](https://github.com/BNLNPPS/swf-mcp-agent)
 
-#### Implementation notes
+This agent may be added in the future for managing Model Context Protocol (MCP) services. For the moment, this is done in swf-monitor (Colocated with the agent data the MCP services provide)
 
-- Note Paul's [ask-panda example](https://github.com/PalNilsson/ask-panda) of
-  MCP server and client
+
+Note Paul Nilsson's [ask-panda example](https://github.com/PalNilsson/ask-panda) of
+  MCP server and client.
 
 ## System infrastructure
 
@@ -132,24 +129,42 @@ including the following.
 The testbed agents are managed by a process manager, which is
 responsible for configuring, starting, stopping, and monitoring the agents.
 
-Implementation: try the python [supervisor](http://supervisord.org/) process
-manager.
+The python [supervisor](http://supervisord.org/) process manager is used.
 
-### Message broker
+### Message Broker
 
-The [ActiveMQ](https://activemq.apache.org/) message broker infrastructure is
-hosted here, providing the messaging backbone for the testbed agents to
-communicate.
+The [ActiveMQ](https://activemq.apache.org/) message broker provides the messaging backbone for the testbed agents to communicate.
 
-#### Implementation notes
+#### Local Development Broker
 
-- use [ActiveMQ Artemis](https://activemq.apache.org/components/artemis/)? A
-  *"next-generation message broker, designed as a high-performance,
-  non-blocking, and scalable alternative to ActiveMQ Classic. In essence,
-  ActiveMQ Artemis is a more modern and high-performance messaging broker
-  designed to address the needs of modern microservices and real-time
-  applications, while ActiveMQ Classic provides a more established and
-  feature-rich platform for traditional messaging use cases."* - Google search
+For local development and testing, a standalone broker can be run using Docker.
+This is managed by the `docker-compose.yml` file in this repository. To start
+the local broker, run:
+
+```bash
+docker-compose up -d
+```
+
+When using the local broker, the agents should be configured with the following
+environment variables:
+
+```bash
+export ACTIVEMQ_HOST=localhost
+export ACTIVEMQ_PORT=61616
+export ACTIVEMQ_USER=admin
+export ACTIVEMQ_PASSWORD=admin
+```
+
+#### Production Broker
+
+In a production environment, the agents should be configured to use the centrally
+provided ActiveMQ service. This is done by setting the same environment variables
+ to point to the production broker's host, port, and credentials.
+
+Each agent (e.g., `swf-monitor`, `swf-data-agent`) will need to be configured
+to read these environment variables and use them to connect to the broker. The
+`swf-monitor` application, for example, reads these values from its Django
+`settings.py` file, which in turn can be populated from environment variables.
 
 ## Glossary
 

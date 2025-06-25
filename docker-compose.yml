@@ -1,0 +1,10 @@
+version: '3.8'
+services:
+  activemq:
+    image: apache/activemq-artemis:latest-alpine
+    ports:
+      - "8161:8161" # Web console
+      - "61616:61616" # Broker port
+    environment:
+      - ARTEMIS_USER=admin
+      - ARTEMIS_PASSWORD=admin
