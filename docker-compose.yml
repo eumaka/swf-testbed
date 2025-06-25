@@ -8,3 +8,17 @@ services:
     environment:
       - ARTEMIS_USER=admin
       - ARTEMIS_PASSWORD=admin
+
+  postgres:
+    image: postgres:latest
+    environment:
+      POSTGRES_DB: swfdb
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: your_db_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:

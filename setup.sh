@@ -1,21 +1,58 @@
-#!/bin/bash
-# This script is intended to be sourced to set up the environment for the SWF testbed.
-#
-# Usage: source setup_env.sh
-#
-# It determines the location of the swf-testbed directory and sets the SWF_HOME
-# environment variable to its parent directory. This allows for a portable setup
-# that works regardless of where you have cloned the project.
+#!/usr/bin/env bash
 
-# Get the absolute path of the directory containing this script (i.e., swf-testbed).
-SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
+# This script sets up the unified Python virtual environment for the entire
+# swf-testbed project. It installs all necessary dependencies from all
+# sub-projects found in the workspace.
 
-# Set SWF_HOME to the parent directory of the script's location.
-# This is the directory assumed to contain all the swf-* repositories.
-export SWF_HOME=$(dirname "$SCRIPT_DIR")
+set -e  # Exit immediately if a command exits with a non-zero status.
 
-echo "SWF_HOME set to: $SWF_HOME"
+# The root directory of the swf-testbed project, where this script is located.
+PROJECT_ROOT="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+VENV_PATH="$PROJECT_ROOT/venv"
 
-# You can add other environment setup tasks here in the future.
-# For example:
-# export ANOTHER_VAR="some_value"
+echo "Creating unified virtual environment at $VENV_PATH..."
+python3 -m venv "$VENV_PATH"
+
+# Activate the virtual environment
+source "$VENV_PATH/bin/activate"
+
+echo "Installing base dependencies..."
+python -m pip install --upgrade pip
+python -m pip install "wheel" "setuptools" "pytest"
+
+# --- Install dependencies for each sub-project in the correct order ---
+
+# swf-common-lib (must be first as others depend on it)
+COMMON_LIB_PATH="$PROJECT_ROOT/../swf-common-lib"
+if [ -d "$COMMON_LIB_PATH" ]; then
+    if [ -f "$COMMON_LIB_PATH/pyproject.toml" ]; then
+        echo "Installing dependencies for swf-common-lib..."
+        python -m pip install -e "$COMMON_LIB_PATH"
+    fi
+else
+    echo "swf-common-lib not found, skipping."
+fi
+
+# swf-monitor
+MONITOR_PATH="$PROJECT_ROOT/../swf-monitor"
+if [ -d "$MONITOR_PATH" ]; then
+    if [ -f "$MONITOR_PATH/pyproject.toml" ]; then
+        echo "Installing dependencies for swf-monitor..."
+        python -m pip install -e "$MONITOR_PATH"
+    fi
+else
+    echo "swf-monitor not found, skipping."
+fi
+
+# swf-testbed (this project, installed last)
+if [ -f "$PROJECT_ROOT/pyproject.toml" ]; then
+    echo "Installing dependencies for swf-testbed..."
+    python -m pip install -e "$PROJECT_ROOT"
+fi
+
+echo ""
+echo "--------------------------------------------------"
+echo "Project setup complete."
+echo "To activate the environment, run:"
+echo "source $VENV_PATH/bin/activate"
+echo "--------------------------------------------------"

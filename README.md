@@ -46,6 +46,78 @@ Overall system design and implementation notes:
   data gathering and distribution is implemented via a web service backed
   by a relational database, with a REST API for data access and reporting.
 
+### Prompt Tips
+
+**Note to the AI Assistant:** The following "Prompt Tips" are a guide for our
+collaboration on this project. Please review them carefully and integrate them
+into your operational context to ensure your contributions are consistent,
+high-quality, and aligned with the project's standards.
+
+#### General
+
+- **Adhere to established standards and conventions.** When implementing new
+  features, prioritize the use of established standards, conventions, and
+  naming schemes provided by the programming language, frameworks, or
+  widely-used libraries. Avoid introducing custom terminology or patterns when a
+  standard equivalent exists.
+- **Favor Simplicity and Maintainability.** Strive for clean, simple, and
+  maintainable solutions. When faced with multiple implementation options,
+  recommend the one that is easiest to understand, modify, and debug. Avoid
+  overly complex or clever code that might be difficult for others (or your
+  future self) to comprehend. Adhere to the principle of "Keep It Simple,
+  Stupid" (KISS).
+- **Follow Markdown Linting Rules.** Ensure all markdown content adheres to the
+  project's linting rules. This includes, but is not limited to, line length,
+  list formatting, and spacing. Consistent formatting improves readability and
+  maintainability.
+- **Maintain the prompts.** Proactively suggest additions or modifications to
+  these tips as the project evolves and new collaboration patterns emerge.
+- **Avoid Gemini Output Truncation.** The Gemini platform may truncate or
+  delete responses that exceed a maximum size limit. To prevent this, be
+  mindful of response length. When presenting large code blocks, diffs, or
+  changes across multiple files, break the response into smaller, sequential
+  messages to ensure the output is delivered completely.
+
+#### Project-Specific
+
+- **Context Refresh.** To regain context on the SWF Testbed project, follow
+  these steps:
+    1. Review the high-level goals and architecture in `swf-testbed/README.md`
+       and `swf-testbed/docs/architecture_and_design_choices.md`.
+    2. Examine the dependencies and structure by checking the `pyproject.toml`
+       and `requirements.txt` files in each sub-project (`swf-testbed`,
+       `swf-monitor`, `swf-common-lib`).
+    3. Use file and code exploration tools to investigate the existing codebase
+       relevant to the current task. For data models, check `models.py`; for
+       APIs, check `urls.py` and `views.py`.
+    4. Consult the conversation summary to understand recent changes and
+       immediate task objectives.
+
+- **Verify and Propose Names.** Before implementing new names for variables,
+  functions, classes, context keys, or other identifiers, first check for
+  consistency with existing names across the relevant context. Once verified,
+  propose them for review. This practice ensures clarity and reduces rework.
+
+- **Prioritize Robust Environment Management.** Python's dependency management
+  can be fragile. To prevent environment-related failures, which are a
+  significant source of errors and delays, the highest priority must be given
+  to creating and maintaining a robust and reproducible environment for the
+  project as a whole.
+
+  - **Create a Unified Project Environment:** We will maintain a single,
+    unified virtual environment for the entire project. This approach treats
+    the project as a coherent whole, avoids the fragility of switching
+    between multiple environments, and ensures all components operate with a
+    consistent set of dependencies.
+  - **Automate Setup and Dependency Management:** A master script should fully
+    automate the setup of this unified environment. This script must install
+    all dependencies from all sub-projects (e.g., from their
+    `pyproject.toml` files), ensuring that local, in-project packages are
+    installed correctly.
+  - **Always Verify the Environment:** Before running any code or tests,
+    scripts must first ensure the unified project environment is activated
+    and up-to-date.
+
 ### Participants
 
 At present the testbed is a project of the Nuclear and Particle Physics
@@ -61,53 +133,115 @@ Software (NPPS) group at BNL; collaborators are welcome.
 
 ### Environment Setup
 
-To prepare your environment for running the testbed, simply `source` the provided setup script:
+Setting up the development environment is a two-step process: a one-time
+installation of the project and its dependencies, followed by a quick activation
+step for each new terminal session.
+
+#### 1. One-Time Installation
+
+First, run the master setup script from the `swf-testbed` directory. This will
+create a unified Python virtual environment for the entire project in `./venv`
+and install all necessary dependencies from all sub-projects.
 
 ```bash
-source setup.sh
+./setup.sh
 ```
 
-This script automatically determines the project's root directory (assuming all `swf-*` repositories are siblings) and sets the `SWF_HOME` environment variable. This variable is then used by other parts of the testbed, like the Supervisor configuration, to locate necessary files and directories.
+This script automatically determines the project's root directory (assuming all
+`swf-*` repositories are siblings) and sets the `SWF_HOME` environment
+variable. This variable is then used by other parts of the testbed, like the
+Supervisor configuration, to locate necessary files and directories.
 
-It is recommended to run this command every time you open a new terminal to work on the project. You can also add it to your shell's startup file (e.g., `~/.bash_profile`, `~/.zshrc`) for convenience.
+It is recommended to run this command every time you open a new terminal to work
+on the project. You can also add it to your shell's startup file (e.g.,
+`~/.bash_profile`, `~/.zshrc`) for convenience.
+
+## Running the Testbed
+
+You can run the testbed in two modes: using Docker for managing background
+services (PostgreSQL and ActiveMQ), or by running these services locally on
+your host machine.
+
+### Using Docker (Recommended)
+
+This is the recommended approach as it provides a consistent, cross-platform
+environment.
+
+**Prerequisites:**
+
+- Docker Desktop installed and running.
+
+**Usage:**
+
+The `swf-testbed` CLI provides commands to manage the entire testbed, including
+the Docker containers and the Python agents managed by Supervisor.
+
+- `swf-testbed start`: Starts the Docker containers (PostgreSQL, ActiveMQ) and
+  then starts all Python agents.
+- `swf-testbed stop`: Stops and removes the Docker containers, and stops all
+  Python agents.
+- `swf-testbed status`: Shows the status of the Docker containers and the
+  Python agents.
+
+### Running Locally (Without Docker)
+
+This mode is for users who prefer to manage the background services directly on
+their host machine.
+
+**Prerequisites:**
+
+You are responsible for installing and running PostgreSQL and ActiveMQ.
+
+- **PostgreSQL:**
+  - **macOS (using Homebrew):**
+
+    ```bash
+    brew install postgresql
+    brew services start postgresql
+    # Optional: Create a user and database
+    # createuser -s admin
+    # createdb -O admin swfdb
+    ```
+
+  - **Other Systems:** Follow the official installation guide for your
+    operating system.
+
+- **ActiveMQ:**
+  - **macOS (using Homebrew):**
+
+    ```bash
+    brew install activemq
+    brew services start activemq
+    ```
+
+  - **Other Systems:** Download and follow the installation instructions from the
+    [ActiveMQ website](https://activemq.apache.org/components/classic/download/).
+
+**Usage:**
+
+The `swf-testbed` CLI also provides commands for managing the testbed services
+when they are running locally.
+
+- `swf-testbed start-local`: Starts the Python agents using Supervisor. It
+  assumes PostgreSQL and ActiveMQ are already running.
+- `swf-testbed stop-local`: Stops the Python agents managed by Supervisor.
+- `swf-testbed status-local`: Checks the status of local services (PostgreSQL,
+  ActiveMQ) and the Python agents managed by Supervisor.
+
+## Development
 
 ### Process Management
 
-The testbed agents are managed as a group of processes by [Supervisor](http://supervisord.org/), a process control system. This allows for centralized start/stop/monitoring of all agents, automatic restarting of failed agents, and consistent logging.
+We use `supervisor` to manage the various Python agent processes. The
+configuration is located in `supervisord.conf`. This file is a template and
+should be copied to the root of the project during initialization.
 
-#### Configuration
+The `swf-testbed init` command will create the `logs` directory and copy the
+`supervisord.conf` file for you.
 
-The configuration for Supervisor is located in the `supervisord.conf` file in this repository. It uses the `SWF_HOME` environment variable (set by the `setup.sh` script) to locate the agent directories.
-
-For example, the `directory` setting for an agent looks like this:
-
-```ini
-directory=%(ENV_SWF_HOME)s/swf-daqsim-agent
-```
-
-This allows for a portable configuration. You may still need to adjust the `command` for each agent depending on how you manage your Python environment (e.g., using `poetry run python -m ...`). The `FIXME` comments in the file provide guidance.
-
-#### Usage
-
-1.  **Start supervisord:**
-    ```bash
-    supervisord -c supervisord.conf
-    ```
-    This will start the supervisord daemon in the background.
-
-2.  **Control agents with `supervisorctl`:**
-    Once the daemon is running, you can manage the agents using the `supervisorctl` command-line tool.
-
-    -   **Check status:**
-        ```bash
-        supervisorctl status
-        ```
-    -   **Start/stop/restart all agents:**
-        ```bash
-        supervisorctl start all
-        supervisorctl stop all
-        supervisorctl restart all
-        ```
+The `supervisord.conf` file is configured to use the `SWF_HOME` environment
+variable to locate the various `swf-*` repositories. Make sure you have sourced
+the `setup.sh` script before running any `supervisor` commands.
 
 STF availability. It also has a 'watcher' role to identify and report
 stalls or anomalies.
@@ -131,10 +265,13 @@ STF availability by the swf-data-agent.
 
 ### [swf-mcp-agent](https://github.com/BNLNPPS/swf-mcp-agent)
 
-This agent may be added in the future for managing Model Context Protocol (MCP) services. For the moment, this is done in swf-monitor (Colocated with the agent data the MCP services provide)
+This agent may be added in the future for managing Model Context Protocol
+(MCP) services. For the moment, this is done in swf-monitor (Colocated with
+the agent data the MCP services provide)
 
 
-Note Paul Nilsson's [ask-panda example](https://github.com/PalNilsson/ask-panda) of
+Note Paul Nilsson's [ask-panda
+example](https://github.com/PalNilsson/ask-panda) of
   MCP server and client.
 
 ## System infrastructure
@@ -151,7 +288,8 @@ The python [supervisor](http://supervisord.org/) process manager is used.
 
 ### Message Broker
 
-The [ActiveMQ](https://activemq.apache.org/) message broker provides the messaging backbone for the testbed agents to communicate.
+The [ActiveMQ](https://activemq.apache.org/) message broker provides the
+messaging backbone for the testbed agents to communicate.
 
 #### Local Development Broker
 
