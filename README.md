@@ -57,40 +57,58 @@ Software (NPPS) group at BNL; collaborators are welcome.
 - Michel Villanueva
 - Xin Zhao
 
-## Software organization
+## Testbed Infrastructure
 
-The streaming workflow (swf prefix) set of repositories make up the software
-for the ePIC streaming workflow testbed project.
+### Environment Setup
 
-The repositories mapping to testbed components are:
+To prepare your environment for running the testbed, simply `source` the provided setup script:
 
-### [swf-monitor](https://github.com/BNLNPPS/swf-monitor)
+```bash
+source setup.sh
+```
 
-This is a web service providing system monitoring and comprehensive
-information about the testbed's state, both via browser-based dashboards and a
-json based REST API.
+This script automatically determines the project's root directory (assuming all `swf-*` repositories are siblings) and sets the `SWF_HOME` environment variable. This variable is then used by other parts of the testbed, like the Supervisor configuration, to locate necessary files and directories.
 
-This module manages the databases used by the testbed, and offers a REST API
-for other agents in the system to report status and retrieve information.
+It is recommended to run this command every time you open a new terminal to work on the project. You can also add it to your shell's startup file (e.g., `~/.bash_profile`, `~/.zshrc`) for convenience.
 
-### [swf-daqsim-agent](https://github.com/BNLNPPS/swf-daqsim-agent)
+### Process Management
 
-This is the information agent designed to simulate the Data Acquisition (DAQ)
-system and other EIC machine and ePIC detector influences on streaming
-processing. This dynamic simulator acts as the primary input and driver of
-activity within the testbed.
+The testbed agents are managed as a group of processes by [Supervisor](http://supervisord.org/), a process control system. This allows for centralized start/stop/monitoring of all agents, automatic restarting of failed agents, and consistent logging.
 
-#### Implementation notes
+#### Configuration
 
-- Base it on the [pysim](https://pypi.org/project/pysim/) dynamical system
-  modeler.
+The configuration for Supervisor is located in the `supervisord.conf` file in this repository. It uses the `SWF_HOME` environment variable (set by the `setup.sh` script) to locate the agent directories.
 
-### [swf-data-agent](https://github.com/BNLNPPS/swf-data-agent)
+For example, the `directory` setting for an agent looks like this:
 
-This is the central data handling agent within the testbed. It listens to
-the swf-daqsim-agent, manages Rucio subscriptions of run datasets and STF
-files, creates new run datasets, and sends messages to the
-swf-processing-agent for run processing and to the swf-fastmon-agent for new
+```ini
+directory=%(ENV_SWF_HOME)s/swf-daqsim-agent
+```
+
+This allows for a portable configuration. You may still need to adjust the `command` for each agent depending on how you manage your Python environment (e.g., using `poetry run python -m ...`). The `FIXME` comments in the file provide guidance.
+
+#### Usage
+
+1.  **Start supervisord:**
+    ```bash
+    supervisord -c supervisord.conf
+    ```
+    This will start the supervisord daemon in the background.
+
+2.  **Control agents with `supervisorctl`:**
+    Once the daemon is running, you can manage the agents using the `supervisorctl` command-line tool.
+
+    -   **Check status:**
+        ```bash
+        supervisorctl status
+        ```
+    -   **Start/stop/restart all agents:**
+        ```bash
+        supervisorctl start all
+        supervisorctl stop all
+        supervisorctl restart all
+        ```
+
 STF availability. It also has a 'watcher' role to identify and report
 stalls or anomalies.
 
