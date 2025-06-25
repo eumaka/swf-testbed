@@ -6,7 +6,7 @@ This document describes the **recommended and working procedure** for publishing
 - Go to [https://test.pypi.org/account/register/](https://test.pypi.org/account/register/) and create an account.
 - Verify your email address.
 
-## 2. Configure `~/.pypirc`
+## 2. Configure `~/.pypirc` for API Token
 Add the following to your `~/.pypirc` file (create it if it doesn't exist):
 
 ```ini
@@ -16,10 +16,11 @@ index-servers =
 
 [testpypi]
 repository = https://test.pypi.org/legacy/
-username = <your-testpypi-username>
+username = __token__
 password = <your-testpypi-api-token>
 ```
-- It is recommended to use a TestPyPI API token, not your password.
+- **username must be `__token__`** (literally, two underscores on each side of `token`).
+- **password must be your TestPyPI API token** (not your password).
 - You can generate a token at [TestPyPI API tokens](https://test.pypi.org/manage/account/token/).
 
 ## 3. Bump the Version
@@ -42,7 +43,6 @@ python -m build
 pip install --upgrade twine
 twine upload --repository testpypi dist/*
 ```
-- If prompted, enter your TestPyPI username and API token.
 
 ## 6. Install from TestPyPI
 To test installation from TestPyPI:
@@ -55,4 +55,3 @@ pip install --index-url https://test.pypi.org/simple/ <your-package-name>
 - TestPyPI is for testing only. Packages may be deleted at any time.
 - Use a unique version number for each upload.
 - If you want to automate this with GitHub Actions, update your workflow to use the TestPyPI repository URL and credentials.
-- Manual upload will not work if you have enabled trusted publishing for your project.

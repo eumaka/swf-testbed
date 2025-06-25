@@ -17,12 +17,6 @@ contributors and for future architectural reviews.
   versioning and dependency management, allowing components to depend on specific
   versions of the shared library.
 
-- **Alternatives Considered:** A `common/` directory within each component
-  repository was considered but rejected. While simpler to set up initially, this
-  approach would inevitably lead to maintenance issues, code drift, and a
-  violation of the Don't Repeat Yourself (DRY) principle as the separate copies
-  of the code evolved independently.
-
 ## Process Management: `supervisord`
 
 - **The Choice:** The testbed's agent processes will be managed by `supervisord`.
@@ -35,12 +29,12 @@ contributors and for future architectural reviews.
   interface (`supervisorctl`)—with a straightforward configuration file.
 
 - **Alternatives Considered:**
-    - **`systemd`:** A powerful alternative on Linux, but it is not cross-platform
+  - **`systemd`:** A powerful alternative on Linux, but it is not cross-platform
       and would prevent the testbed from running easily on macOS.
-    - **Docker Compose:** Excellent for managing multi-container services. While
+  - **Docker Compose:** Excellent for managing multi-container services. While
       this is a powerful pattern, the primary distribution goal is to package the
       Python code itself, not necessarily to mandate a container-based runtime
       (see `docs/packaging_and_distribution.md`).
-    - **Manual Scripts:** Running agents in separate terminals is feasible for
+  - **Manual Scripts:** Running agents in separate terminals is feasible for
       development but is not a robust or scalable solution for a deployed
       testbed.
