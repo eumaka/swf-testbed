@@ -9,7 +9,7 @@ requirements draft[^3].
 
 ## Testbed plan
 
-The testbed will prototype the ePIC streaming computing model's workflows and
+The testbed prototypes the ePIC streaming computing model's workflows and
 dataflows from Echelon 0 (E0) egress (the DAQ exit buffer)
 through the processing that takes place at the two Echelon 1 computing
 facilities at BNL and JLab.
@@ -31,19 +31,19 @@ DAQ external subnet rightwards).
 
 Overall system design and implementation notes:
 
-- The implementation language will be Python 3.
-- Testbed modules will be implemented as a set of loosely coupled agents, each
+- The implementation language is Python 3.9 or greater.
+- Testbed modules are implemented as a set of loosely coupled agents, each
   with a specific role in the system.
-- The agents will communicate via messaging, using ActiveMQ as the message
+- The agents communicate via messaging, using ActiveMQ as the message
   broker.
 - The PanDA [^7] distributed workload management system and its ancillary
-  components will be used for workflow orchestration and workload execution.
-- The Rucio [^8] distributed data management system will be used for
+  components are used for workflow orchestration and workload execution.
+- The Rucio [^8] distributed data management system is used for
   management and distribution of data and associated metadata, in close
   orchestration with PanDA.
 - High quality monitoring and centralized management of system data (metadata,
-  bookkeeping, logs etc.) will be a primary design goal. Monitoring and system
-  data gathering and distribution will be implemented via a web service backed
+  bookkeeping, logs etc.) is a primary design goal. Monitoring and system
+  data gathering and distribution is implemented via a web service backed
   by a relational database, with a REST API for data access and reporting.
 
 ### Participants
@@ -70,7 +70,7 @@ This is a web service providing system monitoring and comprehensive
 information about the testbed's state, both via browser-based dashboards and a
 json based REST API.
 
-This module will manage the databases used by the testbed, and offer a REST API
+This module manages the databases used by the testbed, and offers a REST API
 for other agents in the system to report status and retrieve information.
 
 ### [swf-daqsim-agent](https://github.com/BNLNPPS/swf-daqsim-agent)
@@ -87,11 +87,11 @@ activity within the testbed.
 
 ### [swf-data-agent](https://github.com/BNLNPPS/swf-data-agent)
 
-This is the central data handling agent within the testbed. It will listen to
-the swf-daqsim-agent, manage Rucio subscriptions of run datasets and STF
-files, create new run datasets, and send messages to the
+This is the central data handling agent within the testbed. It listens to
+the swf-daqsim-agent, manages Rucio subscriptions of run datasets and STF
+files, creates new run datasets, and sends messages to the
 swf-processing-agent for run processing and to the swf-fastmon-agent for new
-STF availability. It will also have a 'watcher' role to identify and report
+STF availability. It also has a 'watcher' role to identify and report
 stalls or anomalies.
 
 #### Implementation notes
@@ -110,9 +110,9 @@ processing jobs to execute the streaming workflows of the testbed.
 ### [swf-fastmon-agent](https://github.com/BNLNPPS/swf-fastmon-agent)
 
 This is the fast monitoring agent designed to consume (fractions of) STF data
-for quick, near real-time monitoring. This agent will reside at E1 and perform
+for quick, near real-time monitoring. This agent resides at E1 and performs
 remote data reads from STF files in the DAQ exit buffer, skimming a fraction
-of the data of interest for fast monitoring. The agent will be notified of new
+of the data of interest for fast monitoring. The agent is notified of new
 STF availability by the swf-data-agent.
 
 ### [swf-mcp-agent](https://github.com/BNLNPPS/swf-mcp-agent)
@@ -129,7 +129,7 @@ including the following.
 
 ### Agent process management
 
-The testbed agents will be managed by a process manager, which will be
+The testbed agents are managed by a process manager, which is
 responsible for configuring, starting, stopping, and monitoring the agents.
 
 Implementation: try the python [supervisor](http://supervisord.org/) process
@@ -137,8 +137,8 @@ manager.
 
 ### Message broker
 
-The [ActiveMQ](https://activemq.apache.org/) message broker infrastructure will
-be hosted here, providing the messaging backbone for the testbed agents to
+The [ActiveMQ](https://activemq.apache.org/) message broker infrastructure is
+hosted here, providing the messaging backbone for the testbed agents to
 communicate.
 
 #### Implementation notes
