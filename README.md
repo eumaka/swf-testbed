@@ -20,8 +20,12 @@ progress document[^5].
 
 See the E0-E1 overview slide deck [^6] for more information on the E0-E1
 workflow and dataflow.
-For a schematic of the system the testbed targets see slide 4 (from the blue
+The following is a schematic of the system the testbed targets (from the blue
 DAQ external subnet rightwards).
+
+![E0-E1 workflow schematic](images/E0-E1_workflow_schematic.png)
+
+*Figure: E0-E1 data flow and processing schematic*
 
 ## Design and implementation
 
