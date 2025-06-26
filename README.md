@@ -77,6 +77,7 @@ high-quality, and aligned with the project's standards.
   mindful of response length. When presenting large code blocks, diffs, or
   changes across multiple files, break the response into smaller, sequential
   messages to ensure the output is delivered completely.
+- **Automation everywhere it is possible and practical.** Scripts and configuration files should be written to handle missing repos, agents, or directories gracefully, and to auto-create what’s needed. For example, supervisor configs should not fail if an agent/service repo is not checked out, and logs directories should be auto-created if missing. This principle applies broadly: always prefer robust, self-healing automation over manual intervention.
 
 #### Project-Specific
 
