@@ -18,15 +18,13 @@ for repo in "${REPOS[@]}"; do
     REPO_PATH="$REPO_PARENT/$repo"
     TEST_SCRIPT="$REPO_PATH/run_tests.sh"
     echo "--- Running tests for $repo ---"
-    if [ "$repo" == "swf-testbed" ]; then
-        # Only run pytest on tests/ if it exists and is not empty
-        if [ -d "$REPO_PATH/tests" ] && [ "$(ls -A "$REPO_PATH/tests" 2>/dev/null)" ]; then
-            (cd "$REPO_PATH" && pytest tests)
+    if [ -x "$TEST_SCRIPT" ]; then
+        # Prevent recursion: do not run run_all_tests.sh from within itself
+        if [ "$repo" == "swf-testbed" ] && [ "$SCRIPT_DIR" == "$REPO_PATH" ]; then
+            echo "[SKIP] Skipping recursive call to run_all_tests.sh in $repo."
         else
-            echo "[SKIP] No tests/ directory found in $repo. Skipping."
+            (cd "$REPO_PATH" && ./run_tests.sh)
         fi
-    elif [ -x "$TEST_SCRIPT" ]; then
-        (cd "$REPO_PATH" && ./run_tests.sh)
     else
         echo "[SKIP] No test runner found for $repo. Skipping."
     fi
