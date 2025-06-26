@@ -2,6 +2,5 @@
   "no-duplicate-heading": {
     "siblings_only": true
   },
-  "MD036": false,
-  "MD013": false
+  "MD036": false
 }

@@ -21,9 +21,6 @@ dependencies = [
 [project.optional-dependencies]
 test = [
     "pytest",
-    "pytest-asyncio",
-    "anyio",
-    "pytest-django",
 ]
 
 [project.scripts]

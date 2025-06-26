@@ -72,12 +72,6 @@ high-quality, and aligned with the project's standards.
   maintainability.
 - **Maintain the prompts.** Proactively suggest additions or modifications to
   these tips as the project evolves and new collaboration patterns emerge.
-- **Avoid Gemini Output Truncation.** The Gemini platform may truncate or
-  delete responses that exceed a maximum size limit. To prevent this, be
-  mindful of response length. When presenting large code blocks, diffs, or
-  changes across multiple files, break the response into smaller, sequential
-  messages to ensure the output is delivered completely.
-- **Automation everywhere it is possible and practical.** Scripts and configuration files should be written to handle missing repos, agents, or directories gracefully, and to auto-create what’s needed. For example, supervisor configs should not fail if an agent/service repo is not checked out, and logs directories should be auto-created if missing. This principle applies broadly: always prefer robust, self-healing automation over manual intervention.
 
 #### Project-Specific
 
@@ -99,26 +93,6 @@ high-quality, and aligned with the project's standards.
   consistency with existing names across the relevant context. Once verified,
   propose them for review. This practice ensures clarity and reduces rework.
 
-- **Prioritize Robust Environment Management.** Python's dependency management
-  can be fragile. To prevent environment-related failures, which are a
-  significant source of errors and delays, the highest priority must be given
-  to creating and maintaining a robust and reproducible environment for the
-  project as a whole.
-
-  - **Create a Unified Project Environment:** We will maintain a single,
-    unified virtual environment for the entire project. This approach treats
-    the project as a coherent whole, avoids the fragility of switching
-    between multiple environments, and ensures all components operate with a
-    consistent set of dependencies.
-  - **Automate Setup and Dependency Management:** A master script should fully
-    automate the setup of this unified environment. This script must install
-    all dependencies from all sub-projects (e.g., from their
-    `pyproject.toml` files), ensuring that local, in-project packages are
-    installed correctly.
-  - **Always Verify the Environment:** Before running any code or tests,
-    scripts must first ensure the unified project environment is activated
-    and up-to-date.
-
 ### Participants
 
 At present the testbed is a project of the Nuclear and Particle Physics
@@ -134,18 +108,11 @@ Software (NPPS) group at BNL; collaborators are welcome.
 
 ### Environment Setup
 
-Setting up the development environment is a two-step process: a one-time
-installation of the project and its dependencies, followed by a quick activation
-step for each new terminal session.
-
-#### 1. One-Time Installation
-
-First, run the master setup script from the `swf-testbed` directory. This will
-create a unified Python virtual environment for the entire project in `./venv`
-and install all necessary dependencies from all sub-projects.
+To prepare your environment for running the testbed, simply `source` the
+provided setup script:
 
 ```bash
-./setup.sh
+source setup.sh
 ```
 
 This script automatically determines the project's root directory (assuming all
