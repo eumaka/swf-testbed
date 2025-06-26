@@ -6,31 +6,24 @@ printf "\n%100s\n\n" | tr ' ' '*'
 
 # Get the directory of the script
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+VENV_DIR="$SCRIPT_DIR/venv"
 
-# Autodiscover all swf-* repos in the parent directory
-REPO_PARENT="$(dirname "$SCRIPT_DIR")"
-REPOS=()
-while IFS= read -r -d '' dir; do
-    REPOS+=("$(basename "$dir")")
-done < <(find "$REPO_PARENT" -maxdepth 1 -type d -name 'swf-*' -print0 | sort -z)
+# If a virtual environment is already active, use it
+if [ -n "$VIRTUAL_ENV" ]; then
+    echo "Using already active Python environment: $VIRTUAL_ENV"
+# Otherwise, try to activate the local venv if it exists
+elif [ -d "$VENV_DIR" ]; then
+    echo "Activating Python environment from $VENV_DIR"
+    source "$VENV_DIR/bin/activate"
+else
+    echo "Error: No active Python environment found and no local venv at $VENV_DIR."
+    echo "This script must be run with an active Python environment."
+    exit 1
+fi
 
-for repo in "${REPOS[@]}"; do
-    REPO_PATH="$REPO_PARENT/$repo"
-    TEST_SCRIPT="$REPO_PATH/run_tests.sh"
-    echo "--- Running tests for $repo ---"
-    if [ "$repo" == "swf-testbed" ]; then
-        # Only run pytest on tests/ if it exists and is not empty
-        if [ -d "$REPO_PATH/tests" ] && [ "$(ls -A "$REPO_PATH/tests" 2>/dev/null)" ]; then
-            (cd "$REPO_PATH" && pytest tests)
-        else
-            echo "[SKIP] No tests/ directory found in $repo. Skipping."
-        fi
-    elif [ -x "$TEST_SCRIPT" ]; then
-        (cd "$REPO_PATH" && ./run_tests.sh)
-    else
-        echo "[SKIP] No test runner found for $repo. Skipping."
-    fi
-    echo "--- Finished $repo ---"
-done
-
-echo "--- All tests completed successfully ---"
+if [ -d "$SCRIPT_DIR/tests" ] && [ "$(ls -A "$SCRIPT_DIR/tests" 2>/dev/null)" ]; then
+    echo "Running pytest for swf-testbed..."
+    pytest tests
+else
+    echo "[SKIP] No tests/ directory found in swf-testbed. Skipping."
+fi

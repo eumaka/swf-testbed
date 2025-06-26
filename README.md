@@ -290,6 +290,36 @@ to read these environment variables and use them to connect to the broker. The
 `swf-monitor` application, for example, reads these values from its Django
 `settings.py` file, which in turn can be populated from environment variables.
 
+## Testing
+
+The testbed provides a unified, robust test runner to ensure all components are
+tested consistently and automatically.
+
+- To run all tests across all `swf-*` repositories, simply execute:
+
+  ```bash
+  ./run_all_tests.sh
+  ```
+
+  This script autodiscovers sibling `swf-*` repositories, runs their test
+  suites, and reports results with clear separators.
+
+- To run tests for a specific repository, use its own `run_tests.sh` script
+  (if present), e.g.:
+
+  ```bash
+  ./run_tests.sh
+  ```
+
+  in the desired repo directory.
+
+- The test infrastructure is designed to automatically use the active Python
+  environment or a local venv if present. If neither is available, the test
+  runner will exit with a clear error message.
+
+Test results are printed to the console. For more details, consult the logs or
+output of individual test runs.
+
 ## Glossary
 
 - STF: super time frame. A contiguous set of ~1000 TFs containing about ~0.6s

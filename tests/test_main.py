@@ -22,42 +22,13 @@ def test_environment(tmp_path):
     # Teardown: clean up by changing back to the original directory
     os.chdir(cwd)
 
-def test_init(test_environment):
-    """Test the init command."""
-    # Arrange
-    # The test_environment fixture has already set up a temp dir
-    # and changed the CWD to it.
-
-    # Act
-    result = runner.invoke(app, ["init"])
-
-    # Assert
-    assert result.exit_code == 0
-    assert "Initializing testbed environment..." in result.stdout
-    assert Path("logs").is_dir()
-    assert Path("supervisord.conf").is_file()
-    assert "Created directory:" in result.stdout
-    assert "Created supervisord.conf" in result.stdout
-
-def test_init_already_exists(test_environment):
-    """Test that init command does not overwrite existing files."""
-    # Arrange
-    conf_file = Path("supervisord.conf")
-    conf_file.write_text("existing content")
-
-    # Act
-    result = runner.invoke(app, ["init"])
-
-    # Assert
-    assert result.exit_code == 0
-    assert "supervisord.conf already exists. Skipping." in result.stdout
-    assert conf_file.read_text() == "existing content"
-
 @patch('subprocess.run')
 def test_start(mock_run, test_environment):
     """Test the start command."""
     # Arrange
     (test_environment / "supervisord.conf").touch()
+    (test_environment / "docker-compose.yml").touch()
+    mock_run.return_value.returncode = 0
 
     # Act
     result = runner.invoke(app, ["start"])

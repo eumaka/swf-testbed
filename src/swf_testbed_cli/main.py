@@ -35,6 +35,15 @@ def start():
     """
     Starts the testbed services using supervisord and docker compose.
     """
+    # Check for required files
+    if not Path("docker-compose.yml").is_file():
+        print("Error: docker-compose.yml not found in the current directory. "
+              "Please ensure you are in the project root and the file exists.")
+        raise typer.Exit(code=1)
+    if not Path("supervisord.conf").is_file():
+        print("Error: supervisord.conf not found in the current directory. "
+              "Please ensure you have the correct configuration file present.")
+        raise typer.Exit(code=1)
     print("Starting testbed services...")
     print("--- Starting Docker services ---")
     subprocess.run(["docker", "compose", "up", "-d"])
