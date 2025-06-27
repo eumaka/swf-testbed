@@ -26,3 +26,6 @@ test = [
 [project.scripts]
 # This creates the `swf-testbed` command in the user's PATH
 swf-testbed = "swf_testbed_cli.main:app"
+
+[tool.setuptools.packages.find]
+where = ["src"]

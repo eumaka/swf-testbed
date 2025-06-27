@@ -93,6 +93,14 @@ high-quality, and aligned with the project's standards.
   consistency with existing names across the relevant context. Once verified,
   propose them for review. This practice ensures clarity and reduces rework.
 
+> **Prompt Tip: Ensuring Robust and Future-Proof Tests**
+>
+> - Write tests that assert on outcomes, structure, and status codes—not on exact output strings or UI text, unless absolutely required for correctness.
+> - For CLI and UI tests, check for valid output structure (e.g., presence of HTML tags, table rows, or any output) rather than specific phrases or case.
+> - For API and backend logic, assert on status codes, database state, and required keys/fields, not on full response text.
+> - This approach ensures your tests are resilient to minor UI or output changes, reducing maintenance and avoiding false failures.
+> - Always run tests using the provided scripts (`./run_tests.sh` or `./run_all_tests.sh`) to guarantee the correct environment and configuration.
+
 ### Participants
 
 At present the testbed is a project of the Nuclear and Particle Physics
