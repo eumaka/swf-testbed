@@ -193,5 +193,7 @@ cython_debug/
 .cursorignore
 .cursorindexingignore
 
-# Supervisord logs
+# Supervisord logs and runtime files
 logs/
+*.pid
+supervisord.pid
