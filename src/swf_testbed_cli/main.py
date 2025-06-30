@@ -30,11 +30,22 @@ def init():
         shutil.copy(SUPERVISORD_CONF_TEMPLATE, dest_conf)
         print(f"Created {dest_conf}")
 
+def _setup_environment():
+    """Set up the SWF_HOME environment variable for the current process and children."""
+    script_dir = Path(__file__).parent.parent.parent.absolute()
+    swf_home = script_dir.parent
+    os.environ["SWF_HOME"] = str(swf_home)
+    print(f"SWF_HOME set to: {swf_home}")
+    return swf_home
+
 @app.command()
 def start():
     """
     Starts the testbed services using supervisord and docker compose.
     """
+    # Set up environment
+    _setup_environment()
+    
     # Check for required files
     if not Path("docker-compose.yml").is_file():
         print("Error: docker-compose.yml not found in the current directory. "
@@ -71,12 +82,20 @@ def status():
     print("\n--- supervisord services status ---")
     subprocess.run(["supervisorctl", "-c", "supervisord.conf", "status"])
 
-def _check_process_running(process_name: str) -> bool:
-    """Checks if a process with the given name is running."""
-    for proc in psutil.process_iter(['name']):
-        if proc.info['name'] == process_name:
-            return True
-    return False
+def _check_supervisord_running() -> bool:
+    """Checks if supervisord is running by trying to connect to it."""
+    try:
+        result = subprocess.run(
+            ["supervisorctl", "-c", "supervisord.conf", "status"],
+            capture_output=True,
+            text=True,
+            timeout=5
+        )
+        # supervisorctl returns 0 if all processes OK, 3 if some failed, 4 if can't connect
+        # Return True if we can connect (codes 0 or 3), False if can't connect (code 4+)
+        return result.returncode in [0, 3]
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired, FileNotFoundError):
+        return False
 
 def _check_postgres_connection():
     """Checks the connection to the PostgreSQL database."""
@@ -121,6 +140,9 @@ def start_local():
     """
     Starts the local testbed services using supervisord.
     """
+    # Set up environment
+    _setup_environment()
+    
     print("Starting local testbed services...")
 
     db_ok = _check_postgres_connection()
@@ -131,7 +153,7 @@ def start_local():
         raise typer.Abort()
 
     print("\n--- Starting supervisord services ---")
-    if not _check_process_running("supervisord"):
+    if not _check_supervisord_running():
         print("supervisord is not running, starting it now...")
         subprocess.run(["supervisord", "-c", "supervisord.conf"])
     else:
@@ -154,12 +176,15 @@ def status_local():
     """
     Checks the status of the locally running testbed services.
     """
+    # Set up environment (needed for supervisord)
+    _setup_environment()
+    
     print("--- Local services status ---")
     _check_postgres_connection()
     _check_activemq_connection()
     print("\n--- supervisord services status ---")
     # Check if supervisord is running
-    if _check_process_running("supervisord"):
+    if _check_supervisord_running():
         print("supervisord is running.")
         subprocess.run(["supervisorctl", "-c", "supervisord.conf", "status"])
     else:
