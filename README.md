@@ -60,6 +60,13 @@ high-quality, and aligned with the project's standards.
   naming schemes provided by the programming language, frameworks, or
   widely-used libraries. Avoid introducing custom terminology or patterns when a
   standard equivalent exists.
+- **Portability is paramount.** All code must work across different platforms
+  (macOS, Linux, Windows), Python installations (system, homebrew, pyenv, etc.),
+  and deployment environments (Docker, local, cloud). Never hardcode absolute
+  paths, assume specific installation directories, or rely on system-specific
+  process names or command locations. Use relative paths, environment variables,
+  and standard tools (like supervisorctl) rather than platform-specific process
+  detection. When in doubt, choose the more portable solution.
 - **Favor Simplicity and Maintainability.** Strive for clean, simple, and
   maintainable solutions. When faced with multiple implementation options,
   recommend the one that is easiest to understand, modify, and debug. Avoid
@@ -112,25 +119,257 @@ Software (NPPS) group at BNL; collaborators are welcome.
 - Michel Villanueva
 - Xin Zhao
 
+## Getting Started
+
+This section provides a complete step-by-step guide to set up and run the SWF
+testbed on your local machine.
+
+### Prerequisites
+
+- **Python 3.9 or greater**
+- **Git** for cloning repositories
+- **Docker Desktop** (recommended) OR **PostgreSQL** and **ActiveMQ** installed locally
+
+### Step 1: Clone the Repositories
+
+Clone all three SWF repositories as siblings in the same parent directory:
+
+```bash
+# Create a directory for the SWF project
+mkdir swf-project && cd swf-project
+
+# Clone all repositories
+git clone https://github.com/BNLNPPS/swf-testbed.git
+git clone https://github.com/BNLNPPS/swf-monitor.git
+git clone https://github.com/BNLNPPS/swf-common-lib.git
+
+# Your directory structure should now look like:
+# swf-project/
+# ├── swf-testbed/
+# ├── swf-monitor/
+# └── swf-common-lib/
+```
+
+### Step 2: Set Up Infrastructure Services
+
+Choose one of the following approaches:
+
+#### Option A: Using Docker (Recommended)
+
+1. **Install Docker Desktop** and ensure it's running
+2. **Navigate to swf-testbed:**
+   ```bash
+   cd swf-testbed
+   ```
+3. **Start services:**
+   ```bash
+   docker-compose up -d
+   ```
+
+#### Option B: Local Installation (macOS with Homebrew)
+
+1. **Install PostgreSQL and ActiveMQ:**
+   ```bash
+   brew install postgresql@14 activemq
+   ```
+
+2. **Start the services:**
+   ```bash
+   brew services start postgresql@14
+   brew services start activemq
+   ```
+
+3. **Create database and user:**
+   ```bash
+   createuser -s admin
+   createdb -O admin swfdb
+   psql -U admin -d swfdb -c "ALTER USER admin PASSWORD 'admin';"
+   ```
+
+### Step 3: Configure Environment Variables
+
+1. **Navigate to swf-testbed:**
+   ```bash
+   cd swf-testbed
+   ```
+
+2. **Configure swf-monitor secrets:**
+   ```bash
+   cd ../swf-monitor
+   cp .env.example .env
+   ```
+
+3. **Edit the `.env` file** with your database credentials:
+   ```bash
+   # For local development, use these values:
+   DB_PASSWORD='admin'  # Match your PostgreSQL setup
+   SECRET_KEY='django-insecure-your-secret-key-here'  # Generate a new one for production
+   ```
+
+### Step 4: Set Up Python Environment and Install Dependencies
+
+**Activate the virtual environment:**
+
+```bash
+cd swf-testbed
+source venv/bin/activate
+```
+
+**Install dependencies for each component:**
+
+```bash
+# Install swf-common-lib (shared utilities)
+pip install -e ../swf-common-lib
+
+# Install swf-monitor (Django web application)
+pip install -e ../swf-monitor
+
+# Install swf-testbed CLI
+pip install -e .
+```
+
+### Step 5: Initialize and Run the Testbed
+
+1. **Initialize the testbed:**
+   ```bash
+   cd swf-testbed
+   swf-testbed init
+   ```
+
+2. **Set up Django database and admin user:**
+   ```bash
+   # Run Django migrations and create superuser
+   python ../swf-monitor/src/manage.py migrate
+   python ../swf-monitor/src/manage.py createsuperuser
+   ```
+
+3. **Load sample data (optional):**
+   ```bash
+   # Load fake log data to populate the monitoring interface
+   python ../swf-monitor/scripts/load_fake_logs.py
+   ```
+
+4. **Start the testbed:**
+   ```bash
+   # If using Docker:
+   swf-testbed start
+
+   # If using local services:
+   swf-testbed start-local
+   ```
+
+5. **Check status:**
+   ```bash
+   swf-testbed status  # or status-local
+   ```
+
+### Step 6: Verify Setup
+
+1. **Check web interface:**
+   - Django admin: http://localhost:8000/admin/ (use superuser credentials created in Step 5)
+   - ActiveMQ console: http://localhost:8161/admin/ (admin/admin)
+
+2. **Run tests:**
+   ```bash
+   # Run all tests across all repositories
+   ./run_all_tests.sh
+
+   # Or run tests for individual components
+   cd swf-monitor && ./run_tests.sh
+   ```
+
+### Quick Start Summary
+
+For experienced users, the minimal setup is:
+
+```bash
+# Clone repos, install Docker, then:
+cd swf-testbed
+docker-compose up -d
+cd ../swf-monitor && cp .env.example .env  # Edit DB_PASSWORD='admin'
+cd ../swf-testbed
+source venv/bin/activate
+pip install -e ../swf-common-lib ../swf-monitor .
+swf-testbed init
+cd ../swf-monitor/src && python manage.py createsuperuser && cd ../../swf-testbed
+swf-testbed start
+```
+
 ## Testbed Infrastructure
 
 ### Environment Setup
 
-To prepare your environment for running the testbed, simply `source` the
-provided setup script:
+The testbed automatically sets up the required environment variables when you
+run `swf-testbed start` or `swf-testbed start-local`. The `SWF_HOME` environment
+variable is automatically detected and configured to point to the parent
+directory containing all your `swf-*` repositories.
 
-```bash
-source setup.sh
-```
+No manual environment setup is required - the testbed CLI handles this
+automatically.
 
-This script automatically determines the project's root directory (assuming all
-`swf-*` repositories are siblings) and sets the `SWF_HOME` environment
-variable. This variable is then used by other parts of the testbed, like the
-Supervisor configuration, to locate necessary files and directories.
+### Secrets and Configuration Management
 
-It is recommended to run this command every time you open a new terminal to work
-on the project. You can also add it to your shell's startup file (e.g.,
-`~/.bash_profile`, `~/.zshrc`) for convenience.
+The testbed uses environment variables to securely manage database credentials,
+API keys, and other sensitive configuration. This approach keeps secrets out of
+source code and allows for different configurations in development and
+production environments.
+
+#### Environment Variable Configuration
+
+Each component that requires secrets uses a `.env` file for local configuration:
+
+- **swf-monitor**: Django application secrets in `swf-monitor/.env` (required - core infrastructure)
+- **swf-data-agent**: Agent configuration in `swf-data-agent/.env` (if present)
+- **swf-processing-agent**: PanDA credentials in `swf-processing-agent/.env` (if present)
+
+#### Setting Up swf-monitor Environment Variables
+
+The Django monitoring application requires database and messaging credentials.
+To configure:
+
+1. **Copy the environment template:**
+   ```bash
+   cp swf-monitor/.env.example swf-monitor/.env
+   ```
+
+2. **Edit the `.env` file** with your actual credentials:
+   ```bash
+   # Django Secret Key - generate a new one for production
+   SECRET_KEY='django-insecure-your-secret-key-here'
+   
+   # PostgreSQL Database Settings
+   DB_NAME='swfdb'
+   DB_USER='admin'
+   DB_PASSWORD='your_db_password'
+   DB_HOST='localhost'
+   DB_PORT='5432'
+   
+   # ActiveMQ Settings
+   ACTIVEMQ_HOST='localhost'
+   ACTIVEMQ_PORT=61613
+   ACTIVEMQ_USER='admin'
+   ACTIVEMQ_PASSWORD='admin'
+   ```
+
+3. **For production deployments**, also set:
+   ```bash
+   DEBUG=False
+   ALLOWED_HOSTS=your.domain.com,www.your.domain.com
+   ```
+
+#### Default Development Credentials
+
+For local development with PostgreSQL and ActiveMQ installed via Homebrew:
+
+- **PostgreSQL**: user `admin`, password `admin`, database `swfdb`
+- **ActiveMQ**: user `admin`, password `admin`, default ports
+
+#### Security Notes
+
+- `.env` files are excluded from version control via `.gitignore`
+- Never commit actual passwords or API keys to the repository
+- Use strong, unique passwords for production deployments
+- Generate a new Django `SECRET_KEY` for production (see Django documentation)
 
 ## Running the Testbed
 
@@ -216,8 +455,8 @@ The `swf-testbed init` command will create the `logs` directory and copy the
 `supervisord.conf` file for you.
 
 The `supervisord.conf` file is configured to use the `SWF_HOME` environment
-variable to locate the various `swf-*` repositories. Make sure you have sourced
-the `setup.sh` script before running any `supervisor` commands.
+variable to locate the various `swf-*` repositories. This is automatically
+configured when you run any `swf-testbed` commands.
 
 STF availability. It also has a 'watcher' role to identify and report
 stalls or anomalies.
