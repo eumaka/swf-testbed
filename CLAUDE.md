@@ -2,6 +2,13 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Development Environment
+
+### Claude Code Setup
+- **Launch Claude Code from the parent directory** containing all swf-* repositories (e.g., `/Users/username/github/`)
+- This enables access to all core repositories for coordinated multi-repository development
+- Do not launch from within individual repository directories as this restricts cross-repo operations
+
 ## Development Commands
 
 ### Testing
@@ -19,9 +26,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `swf-testbed status-local` - Check status of local services and agents
 
 ### Installation and Dependencies
-- Install with: `pip install -e .` (from swf-testbed directory)
+**CRITICAL: Always activate virtual environment first: `source venv/bin/activate`**
+- `source venv/bin/activate && pip install -e .` - Install in development mode (from swf-testbed directory)
 - Dependencies managed via `pyproject.toml`
-- Test dependencies: `pip install .[test]`
+- `source venv/bin/activate && pip install .[test]` - Install test dependencies
+- Virtual environment located at `venv/` - ALWAYS activate before any Python commands
 
 ## Architecture Overview
 
@@ -56,9 +65,10 @@ The system implements loosely coupled agents that communicate via ActiveMQ messa
 ## Development Practices
 
 ### Multi-Repository Development
-- Use coordinated infrastructure branches (e.g., `infra/baseline-v1`) for cross-repo changes
-- Feature branches for single-repository changes
-- Never push directly to main - always use pull requests
+- **Always use infrastructure branches**: `infra/baseline-v1`, `infra/baseline-v2`, etc. for all development
+- Create coordinated branches with same name across all affected repositories
+- Document specific features and changes through descriptive commit messages
+- Never push directly to main - always use branches and pull requests
 - Run `./run_all_tests.sh` before merging infrastructure changes
 - Maintain sibling directory structure for all swf-* repositories
 
