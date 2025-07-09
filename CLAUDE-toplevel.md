@@ -28,6 +28,11 @@ github/
 - **Never push directly to main** - always use branches and pull requests
 
 ### Current Infrastructure Versions
+**CURRENT STATUS**: All core repositories are on coordinated `infra/baseline-v3` branches with:
+- Virtual environment documentation updates (CRITICAL warnings added)
+- Top-level CLAUDE.md moved to swf-testbed/CLAUDE-toplevel.md with symlink
+- Directory verification guidance added
+
 Check for existing infrastructure branches across core repositories:
 ```bash
 # Check core repos for current infrastructure baseline
@@ -86,6 +91,8 @@ Each repository contains its own CLAUDE.md with detailed, repository-specific gu
 - **swf-common-lib/CLAUDE.md**: Shared utilities, logging infrastructure, packaging
 
 **IMPORTANT**: When working with this ecosystem, Claude Code should automatically read all repository-specific CLAUDE.md files from the three core repositories (swf-testbed, swf-monitor, swf-common-lib) to understand the complete system context and available commands.
+
+**CRITICAL**: Always verify current working directory with `pwd` before any operations, especially git commands. Never assume location - always check explicitly to prevent errors in multi-repository workflows.
 
 ## System Architecture
 
