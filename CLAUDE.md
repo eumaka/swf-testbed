@@ -84,6 +84,19 @@ The system implements loosely coupled agents that communicate via ActiveMQ messa
 - Tests assert on outcomes and structure, not exact output strings
 - Automated test discovery across all swf-* repositories
 
+## Documentation Maintenance
+
+### README Table of Contents
+The README.md contains a manual Table of Contents that must be kept synchronized with the document structure. When making changes to README.md:
+
+1. **Check the TOC** against actual section headings after any structural changes
+2. **Update anchor links** if section names change (use GitHub-style `#section-name` format)
+3. **Add new sections** to the TOC in the correct order
+4. **Remove deleted sections** from the TOC
+5. **Reorder TOC items** to match the document structure
+
+This maintenance should be part of any commit that involves adding, removing, or renaming sections in the README.
+
 ## Key Configuration Files
 
 - `pyproject.toml`: Package configuration and dependencies

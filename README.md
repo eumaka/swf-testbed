@@ -7,6 +7,23 @@ in the streaming computing model meeting[^1], guided by the ePIC streaming
 computing model report[^2], and the ePIC workflow management system
 requirements draft[^3].
 
+## Table of Contents
+
+- [Testbed plan](#testbed-plan)
+- [Design and implementation](#design-and-implementation)
+- [Software organization](#software-organization)
+- [Testbed System Architecture](#testbed-system-architecture)
+- [Getting Started](#getting-started)
+- [Testbed Infrastructure](#testbed-infrastructure)
+- [Running the Testbed](#running-the-testbed)
+- [Development](#development)
+- [Testing](#testing)
+- [Development Workflow](#development-workflow)
+- [Participants](#participants)
+- [Prompt Tips](#prompt-tips)
+- [Glossary](#glossary)
+- [References](#references)
+
 ## Testbed plan
 
 The testbed prototypes the ePIC streaming computing model's workflows and
@@ -102,80 +119,58 @@ the agent data the MCP services provide).
 Note Paul Nilsson's [ask-panda example](https://github.com/PalNilsson/ask-panda) of
 MCP server and client; we want to integrate it into the testbed. Tadashi Maeno has also implemented MCP capability on the core PanDA services, we will want to integrate that as well.
 
-### Prompt Tips
+### Testbed System Architecture
 
-**Note to the AI Assistant:** The following "Prompt Tips" are a guide for our
-collaboration on this project. Please review them carefully and integrate them
-into your operational context to ensure your contributions are consistent,
-high-quality, and aligned with the project's standards.
+The following diagram shows the testbed's agent-based architecture and data flows:
 
-#### General
+```mermaid
+graph LR
+    DAQ[E1/E2 Fast Monitor]
+    PanDA[PanDA]
+    Rucio[Rucio]
+    ActiveMQ[ActiveMQ]
+    PostgreSQL[PostgreSQL]
+    DAQSim[swf-daqsim-agent]
+    DataAgent[swf-data-agent]
+    ProcAgent[swf-processing-agent]
+    FastMon[swf-fastmon-agent]
+    Monitor[swf-monitor]
+    WebUI[Web Dashboard]
+    RestAPI[REST API]
+    MCP[MCP Server]
+    
+    DAQSim -->|1| ActiveMQ
+    ActiveMQ -->|1| DataAgent
+    ActiveMQ -->|1| ProcAgent
+    DataAgent -->|2| Rucio
+    ProcAgent -->|3| PanDA
+    
+    DAQSim -->|4| ActiveMQ
+    ActiveMQ -->|4| DataAgent
+    ActiveMQ -->|4| ProcAgent
+    ActiveMQ -->|4| FastMon
+    
+    DataAgent -->|5| Rucio
+    ProcAgent -->|6| PanDA
+    FastMon -.->|7| DAQ
+    
+    ActiveMQ -.-> Monitor
+    Monitor --> PostgreSQL
+    Monitor --> WebUI
+    Monitor --> RestAPI
+    Monitor --> MCP
+```
 
-- **Adhere to established standards and conventions.** When implementing new
-  features, prioritize the use of established standards, conventions, and
-  naming schemes provided by the programming language, frameworks, or
-  widely-used libraries. Avoid introducing custom terminology or patterns when a
-  standard equivalent exists.
-- **Portability is paramount.** All code must work across different platforms
-  (macOS, Linux, Windows), Python installations (system, homebrew, pyenv, etc.),
-  and deployment environments (Docker, local, cloud). Never hardcode absolute
-  paths, assume specific installation directories, or rely on system-specific
-  process names or command locations. Use relative paths, environment variables,
-  and standard tools (like supervisorctl) rather than platform-specific process
-  detection. When in doubt, choose the more portable solution.
-- **Favor Simplicity and Maintainability.** Strive for clean, simple, and
-  maintainable solutions. When faced with multiple implementation options,
-  recommend the one that is easiest to understand, modify, and debug. Avoid
-  overly complex or clever code that might be difficult for others (or your
-  future self) to comprehend. Adhere to the principle of "Keep It Simple,
-  Stupid" (KISS).
-- **Follow Markdown Linting Rules.** Ensure all markdown content adheres to the
-  project's linting rules. This includes, but is not limited to, line length,
-  list formatting, and spacing. Consistent formatting improves readability and
-  maintainability.
-- **Maintain the prompts.** Proactively suggest additions or modifications to
-  these tips as the project evolves and new collaboration patterns emerge.
+*Figure: Testbed agent architecture and data flow diagram*
 
-#### Project-Specific
-
-- **Context Refresh.** To regain context on the SWF Testbed project, follow
-  these steps:
-    1. Review the high-level goals and architecture in `swf-testbed/README.md`
-       and `swf-testbed/docs/architecture_and_design_choices.md`.
-    2. Examine the dependencies and structure by checking the `pyproject.toml`
-       and `requirements.txt` files in each sub-project (`swf-testbed`,
-       `swf-monitor`, `swf-common-lib`).
-    3. Use file and code exploration tools to investigate the existing codebase
-       relevant to the current task. For data models, check `models.py`; for
-       APIs, check `urls.py` and `views.py`.
-    4. Consult the conversation summary to understand recent changes and
-       immediate task objectives.
-
-- **Verify and Propose Names.** Before implementing new names for variables,
-  functions, classes, context keys, or other identifiers, first check for
-  consistency with existing names across the relevant context. Once verified,
-  propose them for review. This practice ensures clarity and reduces rework.
-
-- **Preserve Human-Written Documentation.** Before making substantial changes to documentation files, carefully review existing content to identify human-authored sections that provide unique value. When adding new content, structure your changes to complement rather than replace existing documentation. If you must restructure or move content, explicitly call out what you're relocating and why, ensuring no substantive human-written content is lost. When in doubt, propose the change structure before implementation.
-
-> **Prompt Tip: Ensuring Robust and Future-Proof Tests**
->
-> - Write tests that assert on outcomes, structure, and status codes—not on exact output strings or UI text, unless absolutely required for correctness.
-> - For CLI and UI tests, check for valid output structure (e.g., presence of HTML tags, table rows, or any output) rather than specific phrases or case.
-> - For API and backend logic, assert on status codes, database state, and required keys/fields, not on full response text.
-> - This approach ensures your tests are resilient to minor UI or output changes, reducing maintenance and avoiding false failures.
-> - Always run tests using the provided scripts (`./run_tests.sh` or `./run_all_tests.sh`) to guarantee the correct environment and configuration.
-
-### Participants
-
-At present the testbed is a project of the Nuclear and Particle Physics
-Software (NPPS) group at BNL; collaborators are welcome.
-
-- Torre Wenaus (lead)
-- Maxim Potekhin
-- Ejiro Umaka
-- Michel Villanueva
-- Xin Zhao
+**Workflow Steps:**
+1. **Run Start** - daqsim-agent generates a run start broadcast message indicating a new datataking run is beginning
+2. **Dataset Creation** - data-agent sees the run start message and has Rucio create a dataset for the run
+3. **Processing Task** - processing-agent sees the run start message and establishes a PanDA processing task for the run
+4. **STF Available** - daqsim-agent generates a broadcast message that a new STF data file is available
+5. **STF Transfer** - data-agent sees the message and initiates Rucio registration and transfer of the STF file to E1 facilities
+6. **STF Processing** - processing-agent sees the new STF file in the dataset and transferred to the E1 by Rucio, and initiates a PanDA job to process the STF
+7. **Fast Monitoring** - fastmon-agent sees the broadcast message that a new STF data file is available and performs a partial read to inject a data sample into E1/E2 fast monitoring
 
 ## Getting Started
 
@@ -702,6 +697,81 @@ git checkout -b feature/your-feature-name
 
 This workflow ensures that the testbed remains stable and integrated while
 allowing for rapid infrastructure development and feature additions.
+
+## Participants
+
+At present the testbed is a project of the Nuclear and Particle Physics
+Software (NPPS) group at BNL; collaborators are welcome.
+
+- Torre Wenaus (lead)
+- Maxim Potekhin
+- Ejiro Umaka
+- Michel Villanueva
+- Xin Zhao
+
+## Prompt Tips
+
+**Note to the AI Assistant:** The following "Prompt Tips" are a guide for our
+collaboration on this project. Please review them carefully and integrate them
+into your operational context to ensure your contributions are consistent,
+high-quality, and aligned with the project's standards.
+
+### General
+
+- **Adhere to established standards and conventions.** When implementing new
+  features, prioritize the use of established standards, conventions, and
+  naming schemes provided by the programming language, frameworks, or
+  widely-used libraries. Avoid introducing custom terminology or patterns when a
+  standard equivalent exists.
+- **Portability is paramount.** All code must work across different platforms
+  (macOS, Linux, Windows), Python installations (system, homebrew, pyenv, etc.),
+  and deployment environments (Docker, local, cloud). Never hardcode absolute
+  paths, assume specific installation directories, or rely on system-specific
+  process names or command locations. Use relative paths, environment variables,
+  and standard tools (like supervisorctl) rather than platform-specific process
+  detection. When in doubt, choose the more portable solution.
+- **Favor Simplicity and Maintainability.** Strive for clean, simple, and
+  maintainable solutions. When faced with multiple implementation options,
+  recommend the one that is easiest to understand, modify, and debug. Avoid
+  overly complex or clever code that might be difficult for others (or your
+  future self) to comprehend. Adhere to the principle of "Keep It Simple,
+  Stupid" (KISS).
+- **Follow Markdown Linting Rules.** Ensure all markdown content adheres to the
+  project's linting rules. This includes, but is not limited to, line length,
+  list formatting, and spacing. Consistent formatting improves readability and
+  maintainability.
+- **Maintain the prompts.** Proactively suggest additions or modifications to
+  these tips as the project evolves and new collaboration patterns emerge.
+
+### Project-Specific
+
+- **Context Refresh.** To regain context on the SWF Testbed project, follow
+  these steps:
+    1. Review the high-level goals and architecture in `swf-testbed/README.md`
+       and `swf-testbed/docs/architecture_and_design_choices.md`.
+    2. Examine the dependencies and structure by checking the `pyproject.toml`
+       and `requirements.txt` files in each sub-project (`swf-testbed`,
+       `swf-monitor`, `swf-common-lib`).
+    3. Use file and code exploration tools to investigate the existing codebase
+       relevant to the current task. For data models, check `models.py`; for
+       APIs, check `urls.py` and `views.py`.
+    4. Consult the conversation summary to understand recent changes and
+       immediate task objectives.
+
+- **Verify and Propose Names.** Before implementing new names for variables,
+  functions, classes, context keys, or other identifiers, first check for
+  consistency with existing names across the relevant context. Once verified,
+  propose them for review. This practice ensures clarity and reduces rework.
+
+- **Preserve Human-Written Documentation.** Before making substantial changes to documentation files, carefully review existing content to identify human-authored sections that provide unique value. When adding new content, structure your changes to complement rather than replace existing documentation. If you must restructure or move content, explicitly call out what you're relocating and why, ensuring no substantive human-written content is lost. When in doubt, propose the change structure before implementation.
+
+> **Prompt Tip: Ensuring Robust and Future-Proof Tests**
+>
+> - Write tests that assert on outcomes, structure, and status codes—not on exact output strings or UI text, unless absolutely required for correctness.
+> - For CLI and UI tests, check for valid output structure (e.g., presence of HTML tags, table rows, or any output) rather than specific phrases or case.
+> - For API and backend logic, assert on status codes, database state, and required keys/fields, not on full response text.
+> - This approach ensures your tests are resilient to minor UI or output changes, reducing maintenance and avoiding false failures.
+> - Always run tests using the provided scripts (`./run_tests.sh` or `./run_all_tests.sh`) to guarantee the correct environment and configuration.
 
 ## Glossary
 
