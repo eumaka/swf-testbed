@@ -14,9 +14,8 @@ requirements draft[^3].
 - [Software organization](#software-organization)
 - [Testbed System Architecture](#testbed-system-architecture)
 - [Getting Started](#getting-started)
-- [Testbed Infrastructure](#testbed-infrastructure)
+- [Infrastructure](#infrastructure)
 - [Running the Testbed](#running-the-testbed)
-- [System infrastructure](#system-infrastructure)
 - [Testing](#testing)
 - [Development Workflow](#development-workflow)
 - [Participants](#participants)
@@ -348,7 +347,7 @@ cd ../swf-monitor/src && python manage.py createsuperuser && cd ../../swf-testbe
 swf-testbed start
 ```
 
-## Testbed Infrastructure
+## Infrastructure
 
 ### Environment Setup
 
@@ -496,12 +495,7 @@ when they are running locally.
 - `swf-testbed status-local`: Checks the status of local services (PostgreSQL,
   ActiveMQ) and the Python agents managed by Supervisor.
 
-## System infrastructure
-
-This repository hosts overall system infrastructure for the testbed software,
-including the following.
-
-### Agent process management
+### Agent Process Management
 
 The testbed agents are managed by a process manager, which is
 responsible for configuring, starting, stopping, and monitoring the agents.
