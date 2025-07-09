@@ -31,6 +31,8 @@ DAQ external subnet rightwards).
 
 Overall system design and implementation notes:
 
+- We aim to follow the [Software Statement of Principles](https://eic.github.io/activities/principles.html) of the EIC and ePIC in the design and
+  implementation of the testbed software.
 - The implementation language is Python 3.9 or greater.
 - Testbed modules are implemented as a set of loosely coupled agents, each
   with a specific role in the system.
