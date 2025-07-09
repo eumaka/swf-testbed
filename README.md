@@ -16,7 +16,7 @@ requirements draft[^3].
 - [Getting Started](#getting-started)
 - [Testbed Infrastructure](#testbed-infrastructure)
 - [Running the Testbed](#running-the-testbed)
-- [Development](#development)
+- [System infrastructure](#system-infrastructure)
 - [Testing](#testing)
 - [Development Workflow](#development-workflow)
 - [Participants](#participants)
@@ -496,9 +496,15 @@ when they are running locally.
 - `swf-testbed status-local`: Checks the status of local services (PostgreSQL,
   ActiveMQ) and the Python agents managed by Supervisor.
 
-## Development
+## System infrastructure
 
-### Process Management
+This repository hosts overall system infrastructure for the testbed software,
+including the following.
+
+### Agent process management
+
+The testbed agents are managed by a process manager, which is
+responsible for configuring, starting, stopping, and monitoring the agents.
 
 We use `supervisor` to manage the various Python agent processes. The
 configuration is located in `supervisord.conf`. This file is a template and
@@ -510,49 +516,6 @@ The `swf-testbed init` command will create the `logs` directory and copy the
 The `supervisord.conf` file is configured to use the `SWF_HOME` environment
 variable to locate the various `swf-*` repositories. This is automatically
 configured when you run any `swf-testbed` commands.
-
-STF availability. It also has a 'watcher' role to identify and report
-stalls or anomalies.
-
-Interactions with Rucio are consolidated in this agent.
-
-### [swf-processing-agent](https://github.com/BNLNPPS/swf-processing-agent)
-
-This is the prompt processing agent that configures and submits PanDA
-processing jobs to execute the streaming workflows of the testbed.
-
-Interactions with PanDA are consolidated in this agent.
-
-### [swf-fastmon-agent](https://github.com/BNLNPPS/swf-fastmon-agent)
-
-This is the fast monitoring agent designed to consume (fractions of) STF data
-for quick, near real-time monitoring. This agent resides at E1 and performs
-remote data reads from STF files in the DAQ exit buffer, skimming a fraction
-of the data of interest for fast monitoring. The agent is notified of new
-STF availability by the swf-data-agent.
-
-### [swf-mcp-agent](https://github.com/BNLNPPS/swf-mcp-agent)
-
-This agent may be added in the future for managing Model Context Protocol
-(MCP) services. For the moment, this is done in swf-monitor (Colocated with
-the agent data the MCP services provide)
-
-
-Note Paul Nilsson's [ask-panda
-example](https://github.com/PalNilsson/ask-panda) of
-  MCP server and client.
-
-## System infrastructure
-
-This repository hosts overall system infrastructure for the testbed software,
-including the following.
-
-### Agent process management
-
-The testbed agents are managed by a process manager, which is
-responsible for configuring, starting, stopping, and monitoring the agents.
-
-The python [supervisor](http://supervisord.org/) process manager is used.
 
 ### Message Broker
 
