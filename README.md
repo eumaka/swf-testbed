@@ -74,20 +74,20 @@ and high-level project information.
 
 The repositories mapping to testbed components are:
 
-### [swf-monitor](../swf-monitor)
+### [swf-monitor](https://github.com/BNLNPPS/swf-monitor)
 
 A web service providing system monitoring and comprehensive information about the testbed's state, both via browser-based dashboards and a json based REST API.
 
 This module manages the databases used by the testbed, and offers a REST API for other agents in the system to report status and retrieve information. It acts as a listener for the ActiveMQ message broker, receiving messages from other agents, storing relevant data in the database and presenting message histories in the monitor. It hosts a Model Context Protocol (MCP) server for the agents to share information with LLM clients to create an intelligent assistant for the testbed.
 
-### [swf-daqsim-agent](../swf-daqsim-agent)
+### [swf-daqsim-agent](https://github.com/BNLNPPS/swf-daqsim-agent)
 
 This is the information agent designed to simulate the Data Acquisition (DAQ)
 system and other EIC machine and ePIC detector influences on streaming
 processing. This dynamic simulator acts as the primary input and driver of
 activity within the testbed.
 
-### [swf-data-agent](../swf-data-agent)
+### [swf-data-agent](https://github.com/BNLNPPS/swf-data-agent)
 
 This is the central data handling agent within the testbed. It listens to
 the swf-daqsim-agent, manages Rucio subscriptions of run datasets and STF
@@ -96,12 +96,12 @@ swf-processing-agent for run processing and to the swf-fastmon-agent for new
 STF availability. It will also have a 'watcher' role to identify and report
 stalls or anomalies.
 
-### [swf-processing-agent](../swf-processing-agent)
+### [swf-processing-agent](https://github.com/BNLNPPS/swf-processing-agent)
 
 This is the prompt processing agent that configures and submits PanDA
 processing jobs to execute the streaming workflows of the testbed.
 
-### [swf-fastmon-agent](../swf-fastmon-agent)
+### [swf-fastmon-agent](https://github.com/BNLNPPS/swf-fastmon-agent)
 
 This is the fast monitoring agent designed to consume (fractions of) STF data
 for quick, near real-time monitoring. This agent will reside at the E1s and perform
@@ -109,7 +109,7 @@ remote data reads from STF files in the DAQ exit buffer, skimming a fraction
 of the data of interest for fast monitoring. The agent will be notified of new
 STF availability by the swf-data-agent.
 
-### [swf-mcp-agent](../swf-mcp-agent)
+### [swf-mcp-agent](https://github.com/BNLNPPS/swf-mcp-agent)
 
 This agent may be added in the future for managing Model Context Protocol
 (MCP) services. For the moment, this is done in swf-monitor (colocated with
@@ -264,7 +264,7 @@ Choose one of the following approaches:
 
 ```bash
 cd swf-testbed
-source venv/bin/activate
+source .venv/bin/activate
 ```
 
 **Install dependencies for each component:**
@@ -340,7 +340,7 @@ cd swf-testbed
 docker-compose up -d
 cd ../swf-monitor && cp .env.example .env  # Edit DB_PASSWORD='admin'
 cd ../swf-testbed
-source venv/bin/activate
+source .venv/bin/activate
 pip install -e ../swf-common-lib ../swf-monitor .
 swf-testbed init
 cd ../swf-monitor/src && python manage.py createsuperuser && cd ../../swf-testbed
@@ -721,6 +721,8 @@ high-quality, and aligned with the project's standards.
   propose them for review. This practice ensures clarity and reduces rework.
 
 - **Preserve Human-Written Documentation.** Before making substantial changes to documentation files, carefully review existing content to identify human-authored sections that provide unique value. When adding new content, structure your changes to complement rather than replace existing documentation. If you must restructure or move content, explicitly call out what you're relocating and why, ensuring no substantive human-written content is lost. When in doubt, propose the change structure before implementation.
+
+- **Schema Migration and Model Consistency Workflow** - When updating Django models or database schema, follow this systematic approach to maintain consistency across the entire application stack: (1) Request user approval to wipe the database for a clean start, since maintaining backward compatibility during development is unnecessary overhead. (2) The Django model is the single source of truth for schema - update models first, then cascade changes downward. (3) Create and apply Django migrations to implement the updated model schema. (4) Update all templates to match actual model field names and structure - templates must conform to the model, never the reverse. (5) Update views to match template parameter expectations and model field names - views serve as the bridge between models and templates. (6) Replace example data with simple, mostly-random content that validates the schema - use domain knowledge for sensible enum values and relationships, but don't over-engineer realistic scenarios. **Key Principle**: Model → Migration → Template → View → Data. Each layer must conform to the layer above it in this hierarchy.
 
 - **Ensuring Robust and Future-Proof Tests** - Write tests that assert on outcomes, structure, and status codes—not on exact output strings or UI text, unless absolutely required for correctness. For CLI and UI tests, check for valid output structure (e.g., presence of HTML tags, table rows, or any output) rather than specific phrases or case. For API and backend logic, assert on status codes, database state, and required keys/fields, not on full response text. This approach ensures your tests are resilient to minor UI or output changes, reducing maintenance and avoiding false failures. Always run tests using the provided scripts (`./run_tests.sh` or `./run_all_tests.sh`) to guarantee the correct environment and configuration.
 
