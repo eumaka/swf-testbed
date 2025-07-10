@@ -36,9 +36,9 @@ fi
 echo "✅ All required repositories found"
 
 # Create virtual environment if it doesn't exist
-if [[ ! -d "venv" ]]; then
+if [[ ! -d ".venv" ]]; then
     echo "🐍 Creating Python virtual environment..."
-    python3 -m venv venv
+    python3 -m venv .venv
     echo "✅ Virtual environment created"
 else
     echo "✅ Virtual environment already exists"
@@ -46,7 +46,7 @@ fi
 
 # Activate virtual environment
 echo "🔧 Activating virtual environment..."
-source venv/bin/activate
+source .venv/bin/activate
 
 # Upgrade pip
 echo "📦 Upgrading pip..."
@@ -83,7 +83,7 @@ echo ""
 echo "🎉 Development environment setup complete!"
 echo ""
 echo "📋 Next steps:"
-echo "   1. Activate the virtual environment: source venv/bin/activate"
+echo "   1. Activate the virtual environment: source .venv/bin/activate"
 echo "   2. Configure swf-monitor secrets: cd ../swf-monitor && cp .env.example .env"
 echo "      Then edit .env with your database credentials (DB_PASSWORD='admin')"
 echo "   3. Initialize testbed: swf-testbed init"

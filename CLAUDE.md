@@ -26,11 +26,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `swf-testbed status-local` - Check status of local services and agents
 
 ### Installation and Dependencies
-**CRITICAL: Always activate virtual environment first: `source venv/bin/activate`**
-- `source venv/bin/activate && pip install -e .` - Install in development mode (from swf-testbed directory)
+**CRITICAL: Always activate virtual environment first: `source .venv/bin/activate`**
+- `source .venv/bin/activate && pip install -e .` - Install in development mode (from swf-testbed directory)
 - Dependencies managed via `pyproject.toml`
-- `source venv/bin/activate && pip install .[test]` - Install test dependencies
-- Virtual environment located at `venv/` - ALWAYS activate before any Python commands
+- `source .venv/bin/activate && pip install .[test]` - Install test dependencies
+- Virtual environment located at `.venv/` - ALWAYS activate before any Python commands
 
 ## Architecture Overview
 

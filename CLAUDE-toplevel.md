@@ -58,7 +58,7 @@ cd swf-testbed && ./run_all_tests.sh
 ### System Initialization
 ```bash
 cd swf-testbed
-source venv/bin/activate
+source .venv/bin/activate
 pip install -e ../swf-common-lib ../swf-monitor .
 swf-testbed init
 ```

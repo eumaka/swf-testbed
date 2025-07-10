@@ -6,7 +6,7 @@ printf "\n%100s\n\n" | tr ' ' '*'
 
 # Get the directory of the script
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-VENV_DIR="$SCRIPT_DIR/venv"
+VENV_DIR="$SCRIPT_DIR/.venv"
 REQS_TXT="$SCRIPT_DIR/requirements.txt"
 PYPROJECT="$SCRIPT_DIR/pyproject.toml"
 

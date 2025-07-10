@@ -7,15 +7,21 @@ printf "\n%100s\n\n" | tr ' ' '*'
 # Get the directory of the script
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
+# Use PARENT_DIR if set by install.sh, otherwise exit with error
+if [[ -z "$PARENT_DIR" ]]; then
+    echo "❌ Error: PARENT_DIR not set"
+    echo "   Please run install.sh from swf-testbed directory first"
+    exit 1
+fi
+
 # Autodiscover all swf-* repos in the parent directory
-REPO_PARENT="$(dirname "$SCRIPT_DIR")"
 REPOS=()
 while IFS= read -r -d '' dir; do
     REPOS+=("$(basename "$dir")")
-done < <(find "$REPO_PARENT" -maxdepth 1 -type d -name 'swf-*' -print0 | sort -z)
+done < <(find "$PARENT_DIR" -maxdepth 1 -type d -name 'swf-*' -print0 | sort -z)
 
 for repo in "${REPOS[@]}"; do
-    REPO_PATH="$REPO_PARENT/$repo"
+    REPO_PATH="$PARENT_DIR/$repo"
     TEST_SCRIPT="$REPO_PATH/run_tests.sh"
     echo "--- Running tests for $repo ---"
     if [ "$repo" == "swf-testbed" ]; then
