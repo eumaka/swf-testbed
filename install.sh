@@ -15,9 +15,10 @@ if [[ ! -f "pyproject.toml" ]] || [[ ! -d "src/swf_testbed_cli" ]]; then
 fi
 
 # Check for required sibling directories
-PARENT_DIR=$(dirname "$(pwd)")
-SWF_COMMON_LIB="$PARENT_DIR/swf-common-lib"
-SWF_MONITOR="$PARENT_DIR/swf-monitor"
+SWF_PARENT_DIR=$(dirname "$(pwd)")
+export SWF_PARENT_DIR
+SWF_COMMON_LIB="$SWF_PARENT_DIR/swf-common-lib"
+SWF_MONITOR="$SWF_PARENT_DIR/swf-monitor"
 
 echo "📁 Checking for required repositories..."
 if [[ ! -d "$SWF_COMMON_LIB" ]]; then
