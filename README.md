@@ -612,6 +612,11 @@ cd swf-testbed && git checkout -b infra/baseline-v1
 cd ../swf-monitor && git checkout -b infra/baseline-v1
 cd ../swf-common-lib && git checkout -b infra/baseline-v1
 
+# CRITICAL: Push branches to origin immediately to make them available remotely
+cd swf-testbed && git push origin infra/baseline-v1
+cd ../swf-monitor && git push origin infra/baseline-v1
+cd ../swf-common-lib && git push origin infra/baseline-v1
+
 # Work freely across repositories
 # Commit frequently with descriptive messages
 # Let commit messages document the nature and progression of changes
@@ -631,6 +636,9 @@ For features that primarily affect a single repository:
 # Create feature branch in the primary repository
 git checkout -b feature/your-feature-name
 
+# CRITICAL: Push branch to origin immediately to make it available remotely
+git push origin feature/your-feature-name
+
 # Work, commit, and create pull request as normal
 # If cross-repo changes are needed, coordinate with infrastructure approach
 ```
@@ -638,11 +646,12 @@ git checkout -b feature/your-feature-name
 #### Development Guidelines
 
 1. **Never push directly to main** - Always use branches and pull requests
-2. **Coordinate cross-repo changes** - Use matching branch names for related work
-3. **Test system integration** - Run `./run_all_tests.sh` before merging infrastructure changes
-4. **Maintain test coverage** - As you add functionality, extend the tests to ensure `./run_all_tests.sh` reliably evaluates system integrity
-5. **Document through commits** - Use descriptive commit messages to explain the progression of work
-6. **Maintain sibling structure** - Keep all `swf-*` repositories as siblings in the same parent directory
+2. **Push branches to origin immediately** - Always run `git push origin branch-name` right after creating a branch to make it available across all development machines
+3. **Coordinate cross-repo changes** - Use matching branch names for related work
+4. **Test system integration** - Run `./run_all_tests.sh` before merging infrastructure changes
+5. **Maintain test coverage** - As you add functionality, extend the tests to ensure `./run_all_tests.sh` reliably evaluates system integrity
+6. **Document through commits** - Use descriptive commit messages to explain the progression of work
+7. **Maintain sibling structure** - Keep all `swf-*` repositories as siblings in the same parent directory
 
 #### Pull Request Process
 
