@@ -118,6 +118,13 @@ This maintenance should be part of any commit that involves adding, removing, or
 
 ## AI Development Guidelines
 
+### Directory Awareness (Critical for Claude)
+- **ALWAYS run `pwd` before any file operations** - Claude frequently loses track of current directory
+- **NEVER assume your location** - explicitly verify with `pwd` at start of file access attempts
+- **When changing directories**, immediately confirm location with `pwd`
+- **Before using relative paths**, verify you're in the expected directory
+- This is a recurring Claude issue that causes confusion and wasted time
+
 ### Git Branch Management
 - **ALWAYS use `git push -u origin branch-name` on first push** - this is non-negotiable
 - After pushing, verify tracking with `git branch -vv` - should show `[origin/branch-name]`
