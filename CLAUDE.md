@@ -67,6 +67,10 @@ The system implements loosely coupled agents that communicate via ActiveMQ messa
 ### Multi-Repository Development
 - **Always use infrastructure branches**: `infra/baseline-v1`, `infra/baseline-v2`, etc. for all development
 - Create coordinated branches with same name across all affected repositories
+- **CRITICAL: Always push with `-u` flag on first push**: `git push -u origin branch-name`
+  - This sets up branch tracking which is essential for VS Code and git status
+  - Without `-u`, branches appear "unpublished" even after pushing
+  - Example: `git push -u origin infra/baseline-v10`
 - Document specific features and changes through descriptive commit messages
 - Never push directly to main - always use branches and pull requests
 - Run `./run_all_tests.sh` before merging infrastructure changes
@@ -111,3 +115,17 @@ This maintenance should be part of any commit that involves adding, removing, or
 - **ActiveMQ**: Message broker for agent communication
 - **PostgreSQL**: Database for monitoring and metadata storage
 - **supervisord**: Process management for Python agents
+
+## AI Development Guidelines
+
+### Git Branch Management
+- **ALWAYS use `git push -u origin branch-name` on first push** - this is non-negotiable
+- After pushing, verify tracking with `git branch -vv` - should show `[origin/branch-name]`
+- If tracking is missing, fix immediately with: `git branch --set-upstream-to=origin/branch-name branch-name`
+- VS Code "Publish branch" button indicates missing tracking - this must be resolved
+
+### Commit and Push Workflow
+1. Create commits with descriptive messages including Claude Code attribution
+2. First push: `git push -u origin branch-name` (sets up tracking)
+3. Subsequent pushes: `git push` (tracking already established)
+4. Always verify tracking is set up correctly before proceeding
