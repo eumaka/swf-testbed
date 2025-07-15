@@ -25,9 +25,17 @@ for repo in "${REPOS[@]}"; do
     TEST_SCRIPT="$REPO_PATH/run_tests.sh"
     echo "--- Running tests for $repo ---"
     if [ -x "$TEST_SCRIPT" ]; then
-        # Prevent recursion: do not run run_all_tests.sh from within itself
+        # For swf-testbed, run its own tests but prevent calling run_all_tests.sh recursively
         if [ "$repo" == "swf-testbed" ] && [ "$SCRIPT_DIR" == "$REPO_PATH" ]; then
-            echo "[SKIP] Skipping recursive call to run_all_tests.sh in $repo."
+            echo "Running swf-testbed tests (preventing recursion)..."
+            # Run pytest directly instead of run_tests.sh to avoid potential recursion
+            if [ -d "$REPO_PATH/tests" ] && [ "$(ls -A "$REPO_PATH/tests" 2>/dev/null)" ]; then
+                echo "Using Python environment: $VIRTUAL_ENV"
+                echo "Running pytest for swf-testbed..."
+                (cd "$REPO_PATH" && pytest tests)
+            else
+                echo "[SKIP] No tests/ directory found in swf-testbed. Skipping."
+            fi
         else
             (cd "$REPO_PATH" && ./run_tests.sh)
         fi

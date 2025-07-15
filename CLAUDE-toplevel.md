@@ -57,29 +57,33 @@ cd swf-testbed && ./run_all_tests.sh
 
 ### System Initialization
 ```bash
-cd swf-testbed
+cd $SWF_PARENT_DIR/swf-testbed
 source .venv/bin/activate
-pip install -e ../swf-common-lib ../swf-monitor .
-swf-testbed init
+pip install -e $SWF_PARENT_DIR/swf-common-lib $SWF_PARENT_DIR/swf-monitor .
+# CRITICAL: Set up Django environment
+cp $SWF_PARENT_DIR/swf-monitor/.env.example $SWF_PARENT_DIR/swf-monitor/.env
+# Edit .env to set DB_PASSWORD='your_db_password' and SECRET_KEY
+cd $SWF_PARENT_DIR/swf-monitor/src && python manage.py migrate
+cd $SWF_PARENT_DIR/swf-testbed && swf-testbed init
 ```
 
 ### Infrastructure Services
 ```bash
 # Start with Docker (recommended)
-cd swf-testbed && swf-testbed start
+cd $SWF_PARENT_DIR/swf-testbed && swf-testbed start
 
 # Or start locally (requires PostgreSQL/ActiveMQ installed)
-cd swf-testbed && swf-testbed start-local
+cd $SWF_PARENT_DIR/swf-testbed && swf-testbed start-local
 ```
 
 ### Testing
 ```bash
 # Test entire ecosystem
-cd swf-testbed && ./run_all_tests.sh
+cd $SWF_PARENT_DIR/swf-testbed && ./run_all_tests.sh
 
 # Test individual components
-cd swf-monitor && ./run_tests.sh
-cd swf-common-lib && ./run_tests.sh
+cd $SWF_PARENT_DIR/swf-monitor && ./run_tests.sh
+cd $SWF_PARENT_DIR/swf-common-lib && ./run_tests.sh
 ```
 
 ## Repository-Specific Guidance

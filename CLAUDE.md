@@ -32,6 +32,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `source .venv/bin/activate && pip install .[test]` - Install test dependencies
 - Virtual environment located at `.venv/` - ALWAYS activate before any Python commands
 
+**CRITICAL: Django .env Configuration Required**
+- Copy `.env.example` to `.env` in swf-monitor directory: `cp ../swf-monitor/.env.example ../swf-monitor/.env`
+- Update database password in `.env` to match Docker: `DB_PASSWORD='your_db_password'`
+- Set Django secret key: `SECRET_KEY='django-insecure-dev-key-for-testing-only-change-for-production-12345678901234567890'`
+- Run Django migrations: `cd ../swf-monitor/src && python manage.py migrate`
+- Without proper .env setup, Django tests will fail with authentication errors
+
 ## Architecture Overview
 
 ### Multi-Repository Structure
@@ -119,10 +126,11 @@ This maintenance should be part of any commit that involves adding, removing, or
 ## AI Development Guidelines
 
 ### Directory Awareness (Critical for Claude)
+- **ALWAYS use $SWF_PARENT_DIR for navigation** - Never use relative paths like `../swf-monitor`
 - **ALWAYS run `pwd` before any file operations** - Claude frequently loses track of current directory
 - **NEVER assume your location** - explicitly verify with `pwd` at start of file access attempts
-- **When changing directories**, immediately confirm location with `pwd`
-- **Before using relative paths**, verify you're in the expected directory
+- **Use absolute paths**: `cd $SWF_PARENT_DIR/swf-testbed` not `cd swf-testbed`
+- **For file operations**: Use `$SWF_PARENT_DIR/swf-monitor/.env` not `../swf-monitor/.env`
 - This is a recurring Claude issue that causes confusion and wasted time
 
 ### Git Branch Management
