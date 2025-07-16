@@ -664,6 +664,13 @@ git push origin feature/your-feature-name
 This workflow ensures that the testbed remains stable and integrated while
 allowing for rapid infrastructure development and feature additions.
 
+### Example Agent Implementations
+
+For developers looking to create new agents or understand how to interact with
+the testbed's messaging and API services, standalone examples are provided in
+the `example_agents/` directory. These provide a clear, modern blueprint for
+agent development.
+
 ## Participants
 
 At present the testbed is a project of the Nuclear and Particle Physics
