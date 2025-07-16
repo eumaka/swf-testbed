@@ -155,6 +155,9 @@ Each repository contains its own CLAUDE.md with detailed, repository-specific gu
 ## Troubleshooting
 
 ### Common Issues
+- **Virtual Environment Persistence**: The shell environment, including the activated virtual environment, does **not** persist between `run_shell_command` calls. You **MUST** chain environment setup and the command that requires it in a single call.
+  - **Correct**: `cd swf-testbed && source ./install.sh && cd ../swf-monitor && python3 src/manage.py migrate`
+  - **Incorrect**: Running `source ./install.sh` in one call and `python3 src/manage.py migrate` in another.
 - **Core repository structure**: Ensure swf-testbed, swf-monitor, and swf-common-lib are siblings
 - **Environment variables**: Check SWF_HOME is set correctly (auto-configured by CLI)
 - **Database connections**: Verify PostgreSQL is running and accessible
