@@ -4,7 +4,8 @@ services:
     image: apache/activemq-artemis:latest-alpine
     ports:
       - "8161:8161" # Web console
-      - "61616:61616" # Broker port
+      - "61616:61616" # Core protocol port
+      - "61613:61613" # STOMP protocol port
     environment:
       - ARTEMIS_USER=admin
       - ARTEMIS_PASSWORD=admin
