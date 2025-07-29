@@ -4,15 +4,17 @@ set -e
 # Print a single 100-character line of '*' between two blank lines as the first output
 printf "\n%100s\n\n" | tr ' ' '*'
 
-# Get the directory of the script
+# Get the directory of the script (swf-testbed)
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
-# Use SWF_PARENT_DIR if set by install.sh, otherwise exit with error
-if [[ -z "$SWF_PARENT_DIR" ]]; then
-    echo "❌ Error: SWF_PARENT_DIR not set"
-    echo "   Please run install.sh from swf-testbed directory first"
-    exit 1
+# Auto-activate virtual environment if not already active
+if [[ -z "$VIRTUAL_ENV" ]] && [[ -f "$SCRIPT_DIR/.venv/bin/activate" ]]; then
+    echo "🔧 Auto-activating virtual environment..."
+    source "$SCRIPT_DIR/.venv/bin/activate"
 fi
+
+# Set the parent directory containing all swf-* repos
+SWF_PARENT_DIR=$(dirname "$SCRIPT_DIR")
 
 # Autodiscover all swf-* repos in the parent directory
 REPOS=()

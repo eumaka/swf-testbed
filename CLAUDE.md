@@ -15,6 +15,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `./run_tests.sh` - Run tests for swf-testbed only (uses pytest)
 - `./run_all_tests.sh` - Run tests across all swf-* repositories in parent directory
 - Tests are located in `tests/` directory and use pytest framework
+- **Auto-activation**: Test scripts automatically activate the virtual environment if needed
+  - Just run `./run_all_tests.sh` directly - no manual setup required!
+  - Scripts set up their own environment variables internally
 
 ### Testbed Management
 - `swf-testbed init` - Initialize environment (creates logs/ directory and supervisord.conf)
@@ -31,6 +34,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Dependencies managed via `pyproject.toml`
 - `source .venv/bin/activate && pip install .[test]` - Install test dependencies
 - Virtual environment located at `.venv/` - ALWAYS activate before any Python commands
+
+**Initial Setup**
+- Run `source install.sh` once when setting up the development environment
+- This installs all dependencies and creates the virtual environment
+- After initial setup, test scripts handle their own environment activation
 
 **CRITICAL: Django .env Configuration Required**
 - Copy `.env.example` to `.env` in swf-monitor directory: `cp ../swf-monitor/.env.example ../swf-monitor/.env`
