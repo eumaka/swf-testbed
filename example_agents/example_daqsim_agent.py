@@ -27,17 +27,17 @@ class DaqSimAgent(ExampleAgent):
         try:
             message_data = json.loads(frame.body)
             command = message_data.get('command')
-            self.log('INFO', f"Received command: {command}")
+            self.logger.info(f"Received command: {command}")
             
             if command == 'stop':
                 self.running = False
             elif command == 'start':
                 self.running = True
             else:
-                self.log('WARNING', f"Unknown command received: {command}")
+                self.logger.warning(f"Unknown command received: {command}")
 
         except Exception as e:
-            self.log('ERROR', f"Error processing control message: {e}")
+            self.logger.error(f"Error processing control message: {e}")
 
     def run(self):
         """
@@ -64,7 +64,7 @@ class DaqSimAgent(ExampleAgent):
             'comment': 'A simulated STF file.'
         }
         
-        self.log('INFO', f"Generated new STF: {filename}")
+        self.logger.info(f"Generated new STF: {filename}")
         self.send_message('epictopic', message)
 
 

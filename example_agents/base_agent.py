@@ -46,11 +46,15 @@ class ExampleAgent(stomp.ConnectionListener):
 
         # Configuration from environment variables
         self.monitor_url = os.getenv('SWF_MONITOR_URL', 'http://localhost:8002').rstrip('/')
+        self.base_url = self.monitor_url  # For REST logging
         self.api_token = os.getenv('SWF_API_TOKEN')
         self.mq_host = os.getenv('ACTIVEMQ_HOST', 'localhost')
         self.mq_port = int(os.getenv('ACTIVEMQ_PORT', 61613))  # STOMP port for Artemis
         self.mq_user = os.getenv('ACTIVEMQ_USER', 'admin')
         self.mq_password = os.getenv('ACTIVEMQ_PASSWORD', 'admin')
+        
+        # Set up proper logging
+        self.setup_logging()
 
         self.conn = stomp.Connection(
             host_and_ports=[(self.mq_host, self.mq_port)],
@@ -129,7 +133,7 @@ class ExampleAgent(stomp.ConnectionListener):
 
     def send_heartbeat(self):
         """Registers the agent and sends a heartbeat to the monitor."""
-        self.log('INFO', "Attempting to send heartbeat...")
+        self.logger.info("Attempting to send heartbeat...")
         logging.info("Sending heartbeat...")
         payload = {
             "instance_name": self.agent_name,
@@ -139,22 +143,24 @@ class ExampleAgent(stomp.ConnectionListener):
         }
         self._api_request('post', '/systemagents/heartbeat/', payload)
 
-    def log(self, level, message):
-        """Sends a log record to the monitor."""
-        from datetime import datetime
-        import os
-        import threading
-        
-        payload = {
-            "app_name": "example_agent",
-            "instance_name": self.agent_name,
-            "level_name": level.upper(),
-            "message": message,
-            "timestamp": datetime.now().isoformat(),
-            "module": "base_agent",
-            "func_name": "log",
-            "line_no": 142,
-            "process": os.getpid(),
-            "thread": threading.get_ident()
-        }
-        self._api_request('post', '/logs/', payload)
+    def setup_logging(self):
+        """Set up proper REST logging using swf-common-lib."""
+        try:
+            from swf_common_lib.rest_logging import setup_rest_logging
+            # Use the proper REST logging infrastructure
+            self.logger = setup_rest_logging(
+                app_name="example_agent",
+                instance_name=self.agent_name,
+                base_url=self.base_url
+            )
+        except ImportError:
+            # Fallback to basic logging if swf-common-lib not available
+            import logging
+            self.logger = logging.getLogger(f"example_agent.{self.agent_name}")
+            if not self.logger.handlers:
+                handler = logging.StreamHandler()
+                formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(name)s - %(message)s')
+                handler.setFormatter(formatter)
+                self.logger.addHandler(handler)
+                self.logger.setLevel(logging.INFO)
+            print(f"WARNING: swf-common-lib not found, using basic console logging")
