@@ -2,6 +2,47 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Critical Thinking Requirements
+
+Before implementing ANY solution, Claude must explain:
+
+1. **Complete Data Flow Analysis**
+   - Where does data come from?
+   - Where does it get stored?
+   - Where does it get used?
+   - What persists between runs?
+   - What gets cached or reused?
+
+2. **Problem Definition**
+   - What is the actual problem vs what I think it is?
+   - What assumptions am I making?
+   - What evidence do I have that my understanding is correct?
+
+3. **Solution Validation**
+   - Why will this solution work?
+   - What could go wrong?
+   - How can I verify it worked?
+   - What side effects might occur?
+
+## DO NOT CODE UNTIL:
+- You can trace the complete data flow
+- You can explain why the current behavior is happening
+- You can explain exactly what needs to change
+- You have stated all assumptions explicitly
+
+## Common Failure Patterns to Avoid:
+- Jumping to implementation without understanding the system
+- Assuming data behaves as expected without verification
+- Ignoring data persistence between script runs
+- Making changes without understanding their scope
+- Failing to clear cached/persistent data
+
+## When Stuck:
+1. Stop coding
+2. Explain what you think is happening
+3. Ask for verification of your understanding
+4. Only proceed when understanding is confirmed
+
 ## Development Environment
 
 ### Claude Code Setup
