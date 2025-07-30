@@ -49,17 +49,42 @@ class ExampleAgent(stomp.ConnectionListener):
         self.base_url = self.monitor_url  # For REST logging
         self.api_token = os.getenv('SWF_API_TOKEN')
         self.mq_host = os.getenv('ACTIVEMQ_HOST', 'localhost')
-        self.mq_port = int(os.getenv('ACTIVEMQ_PORT', 61613))  # STOMP port for Artemis
+        self.mq_port = int(os.getenv('ACTIVEMQ_PORT', 61612))  # STOMP port for Artemis on this system
         self.mq_user = os.getenv('ACTIVEMQ_USER', 'admin')
         self.mq_password = os.getenv('ACTIVEMQ_PASSWORD', 'admin')
+        
+        # SSL configuration
+        self.use_ssl = os.getenv('ACTIVEMQ_USE_SSL', 'False').lower() == 'true'
+        self.ssl_ca_certs = os.getenv('ACTIVEMQ_SSL_CA_CERTS', '')
+        self.ssl_cert_file = os.getenv('ACTIVEMQ_SSL_CERT_FILE', '')
+        self.ssl_key_file = os.getenv('ACTIVEMQ_SSL_KEY_FILE', '')
         
         # Set up proper logging
         self.setup_logging()
 
+        # Create connection matching swf-common-lib working example
         self.conn = stomp.Connection(
             host_and_ports=[(self.mq_host, self.mq_port)],
-            heartbeats=(10000, 10000)
+            vhost=self.mq_host,
+            try_loopback_connect=False
         )
+        
+        # Configure SSL if enabled - must be done before set_listener
+        if self.use_ssl:
+            import ssl
+            logging.info(f"Configuring SSL connection with CA certs: {self.ssl_ca_certs}")
+            
+            if self.ssl_ca_certs:
+                # Configure SSL transport
+                self.conn.transport.set_ssl(
+                    for_hosts=[(self.mq_host, self.mq_port)],
+                    ca_certs=self.ssl_ca_certs,
+                    ssl_version=ssl.PROTOCOL_TLS_CLIENT
+                )
+                logging.info("SSL transport configured successfully")
+            else:
+                logging.warning("SSL enabled but no CA certificate file specified")
+        
         self.conn.set_listener('', self)
         self.api = requests.Session()
         if self.api_token:
@@ -71,13 +96,25 @@ class ExampleAgent(stomp.ConnectionListener):
         """
         logging.info(f"Starting {self.agent_name}...")
         logging.info(f"Connecting to ActiveMQ at {self.mq_host}:{self.mq_port} with user '{self.mq_user}'")
-        print(f"DEBUG: About to connect to {self.mq_host}:{self.mq_port}")
+        
+        # Track MQ connection status
+        self.mq_connected = False
+        
         try:
-            print("DEBUG: Calling conn.connect()...")
-            self.conn.connect(self.mq_user, self.mq_password, wait=True)
-            print("DEBUG: Connection successful!")
+            logging.debug("Attempting STOMP connection with version 1.2...")
+            # Use STOMP version 1.2 with client-id as per working example
+            self.conn.connect(
+                self.mq_user, 
+                self.mq_password, 
+                wait=True, 
+                version='1.2',
+                headers={'client-id': self.agent_name}
+            )
+            self.mq_connected = True
+            logging.info("Successfully connected to ActiveMQ")
+            
             self.conn.subscribe(destination=self.subscription_queue, id=1, ack='auto')
-            logging.info(f"Connected to ActiveMQ and subscribed to '{self.subscription_queue}'")
+            logging.info(f"Subscribed to queue: '{self.subscription_queue}'")
             
             # Initial registration/heartbeat
             self.send_heartbeat()
@@ -89,17 +126,36 @@ class ExampleAgent(stomp.ConnectionListener):
 
         except KeyboardInterrupt:
             logging.info(f"Stopping {self.agent_name}...")
-        except stomp.exception.ConnectFailedException:
-            logging.error("Failed to connect to ActiveMQ. Please check the connection details.")
+        except stomp.exception.ConnectFailedException as e:
+            self.mq_connected = False
+            logging.error(f"Failed to connect to ActiveMQ: {e}")
+            logging.error("Please check the connection details and ensure ActiveMQ is running.")
         except Exception as e:
+            self.mq_connected = False
             logging.error(f"An unexpected error occurred: {e}")
+            import traceback
+            traceback.print_exc()
         finally:
             if self.conn and self.conn.is_connected():
                 self.conn.disconnect()
+                self.mq_connected = False
                 logging.info("Disconnected from ActiveMQ.")
 
+    def on_connected(self, frame):
+        """Handle successful connection to ActiveMQ."""
+        logging.info(f"Successfully connected to ActiveMQ: {frame.headers}")
+        self.mq_connected = True
+    
     def on_error(self, frame):
         logging.error(f'Received an error from ActiveMQ: {frame.body}')
+        self.mq_connected = False
+    
+    def on_disconnected(self):
+        """Handle disconnection from ActiveMQ."""
+        logging.warning("Disconnected from ActiveMQ")
+        self.mq_connected = False
+        # Send heartbeat to update status
+        self.send_heartbeat()
 
     def on_message(self, frame):
         """
@@ -133,15 +189,28 @@ class ExampleAgent(stomp.ConnectionListener):
 
     def send_heartbeat(self):
         """Registers the agent and sends a heartbeat to the monitor."""
-        self.logger.info("Attempting to send heartbeat...")
-        logging.info("Sending heartbeat...")
+        logging.info("Sending heartbeat to monitor...")
+        
+        # Determine overall status based on MQ connection
+        status = "OK" if getattr(self, 'mq_connected', False) else "WARNING"
+        
+        # Build description with connection details
+        mq_status = "connected" if getattr(self, 'mq_connected', False) else "disconnected"
+        description = f"Example {self.agent_type} agent. MQ: {mq_status}"
+        
         payload = {
             "instance_name": self.agent_name,
             "agent_type": self.agent_type,
-            "status": "OK",
-            "description": f"Example {self.agent_type} agent."
+            "status": status,
+            "description": description,
+            "mq_connected": getattr(self, 'mq_connected', False)  # Include MQ status in payload
         }
-        self._api_request('post', '/systemagents/heartbeat/', payload)
+        
+        result = self._api_request('post', '/systemagents/heartbeat/', payload)
+        if result:
+            logging.info(f"Heartbeat sent successfully. Status: {status}, MQ: {mq_status}")
+        else:
+            logging.warning("Failed to send heartbeat to monitor")
 
     def setup_logging(self):
         """Set up proper REST logging using swf-common-lib."""
