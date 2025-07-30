@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository and other repositories in the swf-* family. It outlines critical thinking requirements, development practices, and operational guidelines to ensure effective and efficient coding.
 
 ## Critical Thinking Requirements
 
