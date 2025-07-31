@@ -59,6 +59,12 @@ def start():
     print("--- Starting Docker services ---")
     subprocess.run(["docker", "compose", "up", "-d"])
     print("--- Starting supervisord services ---")
+    # Check if supervisord is running, start it if needed
+    if not _check_supervisord_running():
+        print("supervisord is not running, starting it now...")
+        subprocess.run(["supervisord", "-c", "supervisord.conf"])
+    else:
+        print("supervisord is already running.")
     subprocess.run(["supervisorctl", "-c", "supervisord.conf", "start", "all"])
 
 @app.command()
