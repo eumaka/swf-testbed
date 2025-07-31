@@ -1,57 +1,47 @@
 # Next Steps - Streaming Workflow Testbed
 
-## Current Status (v13)
+## Current Status (v12 - Major Infrastructure Milestone)
 
-### ✅ **Major Achievements Completed:**
-1. **Logging System Overhaul** - Fixed PostgreSQL logging errors, eliminated field naming conflicts
-2. **Database Migration Success** - Standardized field names (levelname, funcname, lineno)
-3. **Architecture Cleanup** - Replaced problematic PostgresLogHandler with REST logging
-4. **Test Infrastructure** - Created testuser account with SWF_TESTUSER_PASSWORD
-5. **WebSocket Authentication** - Implemented Django session-based auth for MCP testing
+### 🎉 **Major Achievements Completed (v10-v12):**
+1. **Complete MCP Implementation** - WebSocket service fully functional with authentication
+2. **REST MCP API** - Full HTTP alternative to WebSocket with shared service architecture
+3. **Test Suite Refactoring** - 977-line monolithic test split into 11 focused modules
+4. **Documentation Organization** - Comprehensive docs/ structure, streamlined README
+5. **GitHub Actions Integration** - Automatic database schema diagram generation
+6. **Logging Infrastructure** - Production-ready with swf-common-lib integration
 
-### 🔧 **Logging System Fixed:**
-- ✅ Removed PostgresLogHandler (caused migration locks)
-- ✅ Django uses console logging (robust, no circular dependencies)
-- ✅ REST handler available for external agents
-- ✅ Database field names now use Python logging standards
-- ✅ No more SQL mixed-case identifier issues
+### ✅ **Infrastructure Foundation Complete:**
+- **MCP Protocol** - Both WebSocket and REST implementations working
+- **Database Schema** - Auto-generating diagrams, comprehensive models
+- **Authentication** - Token-based API, Django sessions, testuser automation
+- **Testing** - 65 tests across API, UI, WebSocket, and integration scenarios
+- **Documentation** - Setup guides, API reference, development roadmap
+- **ActiveMQ Integration** - SSL connectivity, message queue management
 
-### 🔄 **MCP WebSocket Testing Status:**
-- ✅ MCP WebSocket implementation verified (proper ASGI/Channels setup)
-- ✅ Test user authentication working (Django login successful)
-- ❌ **WebSocket auth still failing (HTTP 403)** - Session cookies not passed correctly to WebSocket consumer
+### 🔧 **Current System Status:**
+- ✅ MCP WebSocket authentication resolved (Django Channels working)
+- ✅ REST MCP endpoints fully functional and documented
+- ✅ Test infrastructure organized and maintainable
+- ✅ PostgresLogHandler cleanup completed in swf-common-lib
+- ✅ GitHub Actions schema generation working
+- ✅ Pull Request #4 created for v12 (ready for review/merge)
 
-### 📋 **Immediate Next Steps (Priority Order):**
-1. **Fix WebSocket authentication** - Resolve Django Channels session passing
-2. **Complete MCP WebSocket testing** - Verify all MCP protocol commands
-3. **Clean up PostgresLogHandler code** - Remove from swf-common-lib
-4. **Review setup process** - Include testuser creation in install docs
-5. **Update core agent examples** - Enhance existing agents in testbed repo
-
-### 🎯 **High Priority Tasks:**
-- [ ] Fix WebSocket session authentication (HTTP 403 issue)
-- [ ] Complete MCP service testing and enhancement
-- [ ] Update existing agent examples in testbed repo
-- [ ] End-to-end integration testing
-
-### 🔧 **Medium Priority Tasks:**
-- [ ] Add MCP views and admin integration
-- [ ] Improve base agent error handling
-- [ ] Update project setup documentation
+### 📋 **Next Development Phase (Priority Order):**
+1. **Setup Process Review** - Ensure testuser creation documented in setup guides
+2. **Agent Enhancement** - Update existing testbed agent examples with more realistic functionality and new MCP capabilities
+3. **Monitor Improvements** - Create more finished monitor views for the models in the schema and the overall streaming workflow
+4. **Monitor Apache Integration** - Integrate the monitor into the pandaserver02 Apache service
+5. **MCP Service Extensions** - Add admin integration, enhanced agent management
+6. **Integration Testing** - End-to-end workflow testing across all components
 
 ## Technical Foundation Status
 
-### ✅ **Robust Infrastructure:**
-- **Django/Daphne ASGI** - WebSocket support working
-- **Database** - Clean schema with standard field names
-- **Logging** - Console for Django, REST API for agents
-- **Authentication** - Django users + testuser for automation
-- **ActiveMQ** - SSL connectivity proven in base_agent
-- **Proxy handling** - BNL environment compatibility resolved
-
-### 🚧 **Known Issues:**
-1. **WebSocket Authentication** - Django Channels session cookies (HTTP 403)
-2. **Proxy Configuration** - Requires NO_PROXY=localhost for requests
-3. **PostgresLogHandler** - Code cleanup needed (deprecated)
-
-**Status**: Core infrastructure solid, WebSocket auth debugging in progress.
+### ✅ **Functional Infrastructure:**
+- **Django/Daphne ASGI** - WebSocket and REST services fully operational
+- **Database** - Auto-generating schema diagrams, comprehensive models
+- **MCP Protocol** - Complete WebSocket and REST implementation
+- **Authentication** - Token-based API, Django sessions, automated testing
+- **Testing** - 65 tests in organized modules, comprehensive coverage
+- **Documentation** - Structured guides, API reference, setup instructions
+- **ActiveMQ** - SSL connectivity, message queue integration
+- **Proxy Handling** - BNL environment compatibility confirmed
