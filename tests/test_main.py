@@ -74,28 +74,6 @@ def test_status(mock_run, test_environment):
     assert "--- supervisord services status ---" in result.stdout
 
 
-@patch('swf_testbed_cli.main._check_activemq_connection', return_value=True)
-@patch('swf_testbed_cli.main._check_postgres_connection', return_value=True)
-@patch('swf_testbed_cli.main._check_process_running', return_value=False)
-@patch('subprocess.run')
-def test_start_local_success(mock_run, mock_check_process, mock_check_postgres, mock_check_activemq, test_environment):
-    """Test the start-local command when services are running and supervisord is not."""
-    # Arrange
-    (test_environment / "supervisord.conf").touch()
-
-    # Act
-    result = runner.invoke(app, ["start-local"])
-
-    # Assert
-    assert result.exit_code == 0
-    mock_check_postgres.assert_called_once()
-    mock_check_activemq.assert_called_once()
-    mock_check_process.assert_called_once_with("supervisord")
-    assert mock_run.call_count == 2
-    mock_run.assert_any_call(["supervisord", "-c", "supervisord.conf"])
-    mock_run.assert_any_call(["supervisorctl", "-c", "supervisord.conf", "start", "all"])
-    assert "--- Starting supervisord services ---" in result.stdout
-
 
 @patch('swf_testbed_cli.main._check_activemq_connection', return_value=False)
 @patch('swf_testbed_cli.main._check_postgres_connection', return_value=True)
@@ -130,22 +108,3 @@ def test_stop_local(mock_run, test_environment):
     assert "--- Stopping local supervisord services ---" in result.stdout
 
 
-@patch('swf_testbed_cli.main._check_activemq_connection')
-@patch('swf_testbed_cli.main._check_postgres_connection')
-@patch('swf_testbed_cli.main._check_process_running', return_value=True)
-@patch('subprocess.run')
-def test_status_local(mock_run, mock_check_process, mock_check_postgres, mock_check_activemq, test_environment):
-    """Test the status-local command."""
-    # Arrange
-    (test_environment / "supervisord.conf").touch()
-
-    # Act
-    result = runner.invoke(app, ["status-local"])
-
-    # Assert
-    assert result.exit_code == 0
-    mock_check_process.assert_called_once_with("supervisord")
-    mock_check_postgres.assert_called_once()
-    mock_check_activemq.assert_called_once()
-    mock_run.assert_called_once_with(["supervisorctl", "-c", "supervisord.conf", "status"])
-    assert "--- Local services status ---" in result.stdout

@@ -57,29 +57,33 @@ cd swf-testbed && ./run_all_tests.sh
 
 ### System Initialization
 ```bash
-cd swf-testbed
+cd $SWF_PARENT_DIR/swf-testbed
 source .venv/bin/activate
-pip install -e ../swf-common-lib ../swf-monitor .
-swf-testbed init
+pip install -e $SWF_PARENT_DIR/swf-common-lib $SWF_PARENT_DIR/swf-monitor .
+# CRITICAL: Set up Django environment
+cp $SWF_PARENT_DIR/swf-monitor/.env.example $SWF_PARENT_DIR/swf-monitor/.env
+# Edit .env to set DB_PASSWORD='your_db_password' and SECRET_KEY
+cd $SWF_PARENT_DIR/swf-monitor/src && python manage.py migrate
+cd $SWF_PARENT_DIR/swf-testbed && swf-testbed init
 ```
 
 ### Infrastructure Services
 ```bash
 # Start with Docker (recommended)
-cd swf-testbed && swf-testbed start
+cd $SWF_PARENT_DIR/swf-testbed && swf-testbed start
 
 # Or start locally (requires PostgreSQL/ActiveMQ installed)
-cd swf-testbed && swf-testbed start-local
+cd $SWF_PARENT_DIR/swf-testbed && swf-testbed start-local
 ```
 
 ### Testing
 ```bash
 # Test entire ecosystem
-cd swf-testbed && ./run_all_tests.sh
+cd $SWF_PARENT_DIR/swf-testbed && ./run_all_tests.sh
 
 # Test individual components
-cd swf-monitor && ./run_tests.sh
-cd swf-common-lib && ./run_tests.sh
+cd $SWF_PARENT_DIR/swf-monitor && ./run_tests.sh
+cd $SWF_PARENT_DIR/swf-common-lib && ./run_tests.sh
 ```
 
 ## Repository-Specific Guidance
@@ -151,6 +155,9 @@ Each repository contains its own CLAUDE.md with detailed, repository-specific gu
 ## Troubleshooting
 
 ### Common Issues
+- **Virtual Environment Persistence**: The shell environment, including the activated virtual environment, does **not** persist between `run_shell_command` calls. You **MUST** chain environment setup and the command that requires it in a single call.
+  - **Correct**: `cd swf-testbed && source ./install.sh && cd ../swf-monitor && python3 src/manage.py migrate`
+  - **Incorrect**: Running `source ./install.sh` in one call and `python3 src/manage.py migrate` in another.
 - **Core repository structure**: Ensure swf-testbed, swf-monitor, and swf-common-lib are siblings
 - **Environment variables**: Check SWF_HOME is set correctly (auto-configured by CLI)
 - **Database connections**: Verify PostgreSQL is running and accessible

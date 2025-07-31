@@ -2,6 +2,47 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Critical Thinking Requirements
+
+Before implementing ANY solution, Claude must explain:
+
+1. **Complete Data Flow Analysis**
+   - Where does data come from?
+   - Where does it get stored?
+   - Where does it get used?
+   - What persists between runs?
+   - What gets cached or reused?
+
+2. **Problem Definition**
+   - What is the actual problem vs what I think it is?
+   - What assumptions am I making?
+   - What evidence do I have that my understanding is correct?
+
+3. **Solution Validation**
+   - Why will this solution work?
+   - What could go wrong?
+   - How can I verify it worked?
+   - What side effects might occur?
+
+## DO NOT CODE UNTIL:
+- You can trace the complete data flow
+- You can explain why the current behavior is happening
+- You can explain exactly what needs to change
+- You have stated all assumptions explicitly
+
+## Common Failure Patterns to Avoid:
+- Jumping to implementation without understanding the system
+- Assuming data behaves as expected without verification
+- Ignoring data persistence between script runs
+- Making changes without understanding their scope
+- Failing to clear cached/persistent data
+
+## When Stuck:
+1. Stop coding
+2. Explain what you think is happening
+3. Ask for verification of your understanding
+4. Only proceed when understanding is confirmed
+
 ## Development Environment
 
 ### Claude Code Setup
@@ -15,6 +56,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `./run_tests.sh` - Run tests for swf-testbed only (uses pytest)
 - `./run_all_tests.sh` - Run tests across all swf-* repositories in parent directory
 - Tests are located in `tests/` directory and use pytest framework
+- **Auto-activation**: Test scripts automatically activate the virtual environment if needed
+  - Just run `./run_all_tests.sh` directly - no manual setup required!
+  - Scripts set up their own environment variables internally
 
 ### Testbed Management
 - `swf-testbed init` - Initialize environment (creates logs/ directory and supervisord.conf)
@@ -31,6 +75,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Dependencies managed via `pyproject.toml`
 - `source .venv/bin/activate && pip install .[test]` - Install test dependencies
 - Virtual environment located at `.venv/` - ALWAYS activate before any Python commands
+
+**Initial Setup**
+- Run `source install.sh` once when setting up the development environment
+- This installs all dependencies and creates the virtual environment
+- After initial setup, test scripts handle their own environment activation
+
+**CRITICAL: Django .env Configuration Required**
+- Copy `.env.example` to `.env` in swf-monitor directory: `cp ../swf-monitor/.env.example ../swf-monitor/.env`
+- Update database password in `.env` to match Docker: `DB_PASSWORD='your_db_password'`
+- Set Django secret key: `SECRET_KEY='django-insecure-dev-key-for-testing-only-change-for-production-12345678901234567890'`
+- Run Django migrations: `cd ../swf-monitor/src && python manage.py migrate`
+- Without proper .env setup, Django tests will fail with authentication errors
 
 ## Architecture Overview
 
@@ -67,6 +123,10 @@ The system implements loosely coupled agents that communicate via ActiveMQ messa
 ### Multi-Repository Development
 - **Always use infrastructure branches**: `infra/baseline-v1`, `infra/baseline-v2`, etc. for all development
 - Create coordinated branches with same name across all affected repositories
+- **CRITICAL: Always push with `-u` flag on first push**: `git push -u origin branch-name`
+  - This sets up branch tracking which is essential for VS Code and git status
+  - Without `-u`, branches appear "unpublished" even after pushing
+  - Example: `git push -u origin infra/baseline-v10`
 - Document specific features and changes through descriptive commit messages
 - Never push directly to main - always use branches and pull requests
 - Run `./run_all_tests.sh` before merging infrastructure changes
@@ -111,3 +171,25 @@ This maintenance should be part of any commit that involves adding, removing, or
 - **ActiveMQ**: Message broker for agent communication
 - **PostgreSQL**: Database for monitoring and metadata storage
 - **supervisord**: Process management for Python agents
+
+## AI Development Guidelines
+
+### Directory Awareness (Critical for Claude)
+- **ALWAYS use $SWF_PARENT_DIR for navigation** - Never use relative paths like `../swf-monitor`
+- **ALWAYS run `pwd` before any file operations** - Claude frequently loses track of current directory
+- **NEVER assume your location** - explicitly verify with `pwd` at start of file access attempts
+- **Use absolute paths**: `cd $SWF_PARENT_DIR/swf-testbed` not `cd swf-testbed`
+- **For file operations**: Use `$SWF_PARENT_DIR/swf-monitor/.env` not `../swf-monitor/.env`
+- This is a recurring Claude issue that causes confusion and wasted time
+
+### Git Branch Management
+- **ALWAYS use `git push -u origin branch-name` on first push** - this is non-negotiable
+- After pushing, verify tracking with `git branch -vv` - should show `[origin/branch-name]`
+- If tracking is missing, fix immediately with: `git branch --set-upstream-to=origin/branch-name branch-name`
+- VS Code "Publish branch" button indicates missing tracking - this must be resolved
+
+### Commit and Push Workflow
+1. Create commits with descriptive messages including Claude Code attribution
+2. First push: `git push -u origin branch-name` (sets up tracking)
+3. Subsequent pushes: `git push` (tracking already established)
+4. Always verify tracking is set up correctly before proceeding
