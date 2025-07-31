@@ -27,12 +27,10 @@
 - ✅ Pull Request #4 created for v12 (ready for review/merge)
 
 ### 📋 **Next Development Phase (Priority Order):**
-1. **Setup Process Review** - Ensure testuser creation documented in setup guides
-2. **Agent Enhancement** - Update existing testbed agent examples with more realistic functionality and new MCP capabilities
-3. **Monitor Improvements** - Create more finished monitor views for the models in the schema and the overall streaming workflow
+1. **Agent Enhancement** - Update existing testbed agent examples with more realistic functionality and new MCP capabilities
+2. **Monitor Improvements** - Create more finished monitor views for the models in the schema and the overall streaming workflow
+3. **Integration Testing** - Create a comprehensive, realistic workflow that exercises all components. 
 4. **Monitor Apache Integration** - Integrate the monitor into the pandaserver02 Apache service
-5. **MCP Service Extensions** - Add admin integration, enhanced agent management
-6. **Integration Testing** - End-to-end workflow testing across all components
 
 ## Technical Foundation Status
 
