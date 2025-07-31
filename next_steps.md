@@ -1,69 +1,57 @@
 # Next Steps - Streaming Workflow Testbed
 
-## MCP Service Status Analysis
+## Current Status (v13)
 
-### ✅ **What's Implemented:**
-1. **Complete Django app structure** with proper ASGI/WebSocket support
-2. **WebSocket consumer** (`MCPConsumer`) with authentication
-3. **MCP protocol v1.0** implementation with proper message handling
-4. **Three core capabilities:**
-   - `discover_capabilities` - Lists available commands
-   - `get_agent_liveness` - Returns alive/dead status based on 5-minute threshold  
-   - `heartbeat` - Receives agent heartbeat notifications
-5. **Database integration** - Uses existing `SystemAgent` model
-6. **Error handling** - Proper MCP error codes and responses
+### ✅ **Major Achievements Completed:**
+1. **Logging System Overhaul** - Fixed PostgreSQL logging errors, eliminated field naming conflicts
+2. **Database Migration Success** - Standardized field names (levelname, funcname, lineno)
+3. **Architecture Cleanup** - Replaced problematic PostgresLogHandler with REST logging
+4. **Test Infrastructure** - Created testuser account with SWF_TESTUSER_PASSWORD
+5. **WebSocket Authentication** - Implemented Django session-based auth for MCP testing
 
-### ⚠️ **What's Missing/Issues:**
-1. **No models** - Empty `models.py` (uses `monitor_app.SystemAgent`)
-2. **No views** - Empty `views.py` 
-3. **No admin integration** - Empty `admin.py`
-4. **WebSocket endpoint**: `ws://localhost:8002/ws/mcp/`
+### 🔧 **Logging System Fixed:**
+- ✅ Removed PostgresLogHandler (caused migration locks)
+- ✅ Django uses console logging (robust, no circular dependencies)
+- ✅ REST handler available for external agents
+- ✅ Database field names now use Python logging standards
+- ✅ No more SQL mixed-case identifier issues
 
-### 📊 **Current Capabilities:**
-- **Agent liveness monitoring** via WebSocket
-- **Real-time heartbeat processing** 
-- **Authentication required** for connections
-- **Protocol versioning** (MCP v1.0)
+### 🔄 **MCP WebSocket Testing Status:**
+- ✅ MCP WebSocket implementation verified (proper ASGI/Channels setup)
+- ✅ Test user authentication working (Django login successful)
+- ❌ **WebSocket auth still failing (HTTP 403)** - Session cookies not passed correctly to WebSocket consumer
 
-### 🚀 **Potential Integration:**
-The MCP service could provide **LLM assistant access** to:
-- Real-time agent status
-- System health monitoring  
-- Agent heartbeat data
-- Historical liveness information
+### 📋 **Immediate Next Steps (Priority Order):**
+1. **Fix WebSocket authentication** - Resolve Django Channels session passing
+2. **Complete MCP WebSocket testing** - Verify all MCP protocol commands
+3. **Clean up PostgresLogHandler code** - Remove from swf-common-lib
+4. **Review setup process** - Include testuser creation in install docs
+5. **Update core agent examples** - Enhance existing agents in testbed repo
 
-## Agent Monitoring System Status
+### 🎯 **High Priority Tasks:**
+- [ ] Fix WebSocket session authentication (HTTP 403 issue)
+- [ ] Complete MCP service testing and enhancement
+- [ ] Update existing agent examples in testbed repo
+- [ ] End-to-end integration testing
 
-### ✅ **Completed in v12:**
-- Fully functional example agent with ActiveMQ STOMP SSL connection
-- REST API heartbeat system with enhanced status reporting
-- SSL configuration matching swf-common-lib working examples
-- Production-ready agent base class for all future agents
-- Comprehensive error handling and connection state tracking
+### 🔧 **Medium Priority Tasks:**
+- [ ] Add MCP views and admin integration
+- [ ] Improve base agent error handling
+- [ ] Update project setup documentation
 
-### 📋 **Immediate Next Steps:**
-1. **Test MCP WebSocket endpoint** functionality
-2. **Enhance MCP service** with additional agent management capabilities
-3. **Build additional agents** using the `base_agent.py` template:
-   - swf-data-agent
-   - swf-processing-agent  
-   - swf-fastmon-agent
-4. **Improve error handling** and connection retry logic in base agent
-5. **Integration testing** between agents, MCP service, and monitoring
+## Technical Foundation Status
 
-### 🎯 **Development Priorities:**
-1. **MCP service completion** for LLM integration
-2. **Agent fleet expansion** using proven base_agent pattern
-3. **End-to-end testing** of streaming workflow pipeline
-4. **Production deployment** preparation
+### ✅ **Robust Infrastructure:**
+- **Django/Daphne ASGI** - WebSocket support working
+- **Database** - Clean schema with standard field names
+- **Logging** - Console for Django, REST API for agents
+- **Authentication** - Django users + testuser for automation
+- **ActiveMQ** - SSL connectivity proven in base_agent
+- **Proxy handling** - BNL environment compatibility resolved
 
-## Technical Foundation
+### 🚧 **Known Issues:**
+1. **WebSocket Authentication** - Django Channels session cookies (HTTP 403)
+2. **Proxy Configuration** - Requires NO_PROXY=localhost for requests
+3. **PostgresLogHandler** - Code cleanup needed (deprecated)
 
-The streaming workflow testbed now has:
-- ✅ **Solid monitoring infrastructure** (REST API + Django admin)
-- ✅ **Working ActiveMQ connectivity** (SSL STOMP with proper authentication)
-- ✅ **Agent template system** (base_agent.py for consistent development)
-- ✅ **MCP framework** (ready for LLM assistant integration)
-- ✅ **Production configuration** (SSL, authentication, proxy handling)
-
-**Status**: Ready for agent development and MCP service enhancement.
+**Status**: Core infrastructure solid, WebSocket auth debugging in progress.

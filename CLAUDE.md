@@ -2,6 +2,10 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository and other repositories in the swf-* family. It outlines critical thinking requirements, development practices, and operational guidelines to ensure effective and efficient coding.ywh
 
+## Critical File Operations Rule
+
+**MAJOR ERROR WARNING: Deleting files, directories, database tables, databases or other entities without explicit user request or authorization is strictly forbidden and constitutes a major error. NEVER use rm, delete, DROP TABLE, or any deletion operations unless explicitly instructed by the user.**
+
 ## Critical Thinking Requirements
 
 Before implementing ANY solution, Claude must explain:
