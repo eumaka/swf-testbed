@@ -3,11 +3,59 @@ This module contains the base class for all example agents.
 """
 
 import os
+import sys
 import time
 import stomp
 import requests
 import json
 import logging
+from pathlib import Path
+
+def setup_environment():
+    """Auto-activate venv and load environment variables."""
+    script_dir = Path(__file__).resolve().parent.parent  # Go up to swf-testbed root
+    
+    # Auto-activate virtual environment if not already active
+    if "VIRTUAL_ENV" not in os.environ:
+        venv_path = script_dir / ".venv"
+        if venv_path.exists():
+            print("🔧 Auto-activating virtual environment...")
+            venv_python = venv_path / "bin" / "python"
+            if venv_python.exists():
+                os.environ["VIRTUAL_ENV"] = str(venv_path)
+                os.environ["PATH"] = f"{venv_path}/bin:{os.environ['PATH']}"
+                sys.executable = str(venv_python)
+        else:
+            print("❌ Error: No Python virtual environment found")
+            return False
+    
+    # Load ~/.env environment variables (they're already exported)
+    env_file = Path.home() / ".env"
+    if env_file.exists():
+        print("🔧 Loading environment variables from ~/.env...")
+        with open(env_file) as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith('#') and '=' in line:
+                    if line.startswith('export '):
+                        line = line[7:]  # Remove 'export '
+                    key, value = line.split('=', 1)
+                    os.environ[key] = value.strip('"\'')
+    
+    # Unset proxy variables to prevent localhost routing through proxy
+    for proxy_var in ['http_proxy', 'https_proxy', 'HTTP_PROXY', 'HTTPS_PROXY']:
+        if proxy_var in os.environ:
+            del os.environ[proxy_var]
+    
+    return True
+
+# Auto-setup environment when module is imported (unless already done)
+if not os.getenv('SWF_ENV_LOADED'):
+    setup_environment()
+    os.environ['SWF_ENV_LOADED'] = 'true'
+
+# Import the centralized logging from swf-common-lib
+from swf_common_lib.rest_logging import setup_rest_logging
 
 # Enable STOMP debug logging to see connection details
 logging.basicConfig(level=logging.DEBUG, 
@@ -46,7 +94,8 @@ class ExampleAgent(stomp.ConnectionListener):
 
         # Configuration from environment variables
         self.monitor_url = os.getenv('SWF_MONITOR_URL', 'http://localhost:8002').rstrip('/')
-        self.base_url = self.monitor_url  # For REST logging
+        # Use HTTP URL for REST logging (no auth required)
+        self.base_url = os.getenv('SWF_MONITOR_HTTP_URL', 'http://localhost:8002').rstrip('/')
         self.api_token = os.getenv('SWF_API_TOKEN')
         self.mq_host = os.getenv('ACTIVEMQ_HOST', 'localhost')
         self.mq_port = int(os.getenv('ACTIVEMQ_PORT', 61612))  # STOMP port for Artemis on this system
@@ -59,8 +108,8 @@ class ExampleAgent(stomp.ConnectionListener):
         self.ssl_cert_file = os.getenv('ACTIVEMQ_SSL_CERT_FILE', '')
         self.ssl_key_file = os.getenv('ACTIVEMQ_SSL_KEY_FILE', '')
         
-        # Set up proper logging
-        self.setup_logging()
+        # Set up centralized REST logging
+        self.logger = setup_rest_logging('example_agent', self.agent_name, self.base_url)
 
         # Create connection matching swf-common-lib working example
         self.conn = stomp.Connection(
@@ -89,6 +138,12 @@ class ExampleAgent(stomp.ConnectionListener):
         self.api = requests.Session()
         if self.api_token:
             self.api.headers.update({'Authorization': f'Token {self.api_token}'})
+        
+        # For localhost development, disable SSL verification
+        if 'localhost' in self.monitor_url or '127.0.0.1' in self.monitor_url:
+            self.api.verify = False
+            import urllib3
+            urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
     def run(self):
         """
@@ -212,24 +267,3 @@ class ExampleAgent(stomp.ConnectionListener):
         else:
             logging.warning("Failed to send heartbeat to monitor")
 
-    def setup_logging(self):
-        """Set up proper REST logging using swf-common-lib."""
-        try:
-            from swf_common_lib.rest_logging import setup_rest_logging
-            # Use the proper REST logging infrastructure
-            self.logger = setup_rest_logging(
-                app_name="example_agent",
-                instance_name=self.agent_name,
-                base_url=self.base_url
-            )
-        except ImportError:
-            # Fallback to basic logging if swf-common-lib not available
-            import logging
-            self.logger = logging.getLogger(f"example_agent.{self.agent_name}")
-            if not self.logger.handlers:
-                handler = logging.StreamHandler()
-                formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(name)s - %(message)s')
-                handler.setFormatter(formatter)
-                self.logger.addHandler(handler)
-                self.logger.setLevel(logging.INFO)
-            print(f"WARNING: swf-common-lib not found, using basic console logging")

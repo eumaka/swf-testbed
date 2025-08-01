@@ -11,6 +11,8 @@ import sys
 import logging
 from datetime import datetime
 from pathlib import Path
+import stomp
+import time
 
 def setup_environment():
     """Auto-activate venv and load environment variables."""
@@ -43,6 +45,11 @@ def setup_environment():
                     key, value = line.split('=', 1)
                     os.environ[key] = value.strip('"\'')
     
+    # Unset proxy variables to prevent localhost routing through proxy
+    for proxy_var in ['http_proxy', 'https_proxy', 'HTTP_PROXY', 'HTTPS_PROXY']:
+        if proxy_var in os.environ:
+            del os.environ[proxy_var]
+    
     return True
 
 # Import the centralized logging from swf-common-lib
@@ -67,6 +74,64 @@ class DAQSimulator:
         # Create output directories
         Path("daq_events").mkdir(exist_ok=True)
         Path("daq_data").mkdir(exist_ok=True)
+        
+        # Setup ActiveMQ connection
+        self.setup_activemq()
+        
+    def setup_activemq(self):
+        """Setup connection to ActiveMQ broker using same pattern as base_agent"""
+        # Configuration from environment variables
+        self.mq_host = os.getenv('ACTIVEMQ_HOST', 'pandaserver02.sdcc.bnl.gov')
+        self.mq_port = int(os.getenv('ACTIVEMQ_PORT', 61612))
+        self.mq_user = os.getenv('ACTIVEMQ_USER', 'wenauseic')
+        self.mq_password = os.getenv('ACTIVEMQ_PASSWORD', 'swf123_wenauseic')
+        self.use_ssl = os.getenv('ACTIVEMQ_USE_SSL', 'True').lower() == 'true'
+        self.ssl_ca_certs = os.getenv('ACTIVEMQ_SSL_CA_CERTS', '/eic/u/wenauseic/github/swf-monitor/full-chain.pem')
+        
+        self.logger.info(f"Connecting to ActiveMQ at {self.mq_host}:{self.mq_port}")
+        
+        # Create connection matching base_agent pattern
+        self.conn = stomp.Connection(
+            host_and_ports=[(self.mq_host, self.mq_port)],
+            vhost=self.mq_host,
+            try_loopback_connect=False
+        )
+        
+        # Configure SSL if enabled
+        if self.use_ssl:
+            import ssl
+            self.logger.info(f"Configuring SSL connection with CA certs: {self.ssl_ca_certs}")
+            self.conn.transport.set_ssl(
+                for_hosts=[(self.mq_host, self.mq_port)],
+                ca_certs=self.ssl_ca_certs,
+                ssl_version=ssl.PROTOCOL_TLS_CLIENT
+            )
+        
+        try:
+            # Connect with STOMP version 1.2
+            self.conn.connect(
+                self.mq_user, 
+                self.mq_password, 
+                wait=True, 
+                version='1.2',
+                headers={'client-id': 'daqsim-simulator'}
+            )
+            self.logger.info("Successfully connected to ActiveMQ")
+            
+            # Set the destination topic
+            self.destination = os.getenv('ACTIVEMQ_HEARTBEAT_TOPIC', 'epictopic')
+            
+        except Exception as e:
+            self.logger.error(f"Failed to connect to ActiveMQ: {e}")
+            raise
+    
+    def send_message(self, destination, message_body):
+        """Send a JSON message to a specific destination - same as base_agent"""
+        try:
+            self.conn.send(body=json.dumps(message_body), destination=destination)
+            self.logger.debug(f"Sent {message_body.get('msg_type')} message to '{destination}'")
+        except Exception as e:
+            self.logger.error(f"Failed to send message to '{destination}': {e}")
         
     def run_daq_cycle(self):
         """Complete DAQ cycle following state transitions"""
@@ -146,6 +211,9 @@ class DAQSimulator:
         event_file = Path("daq_events") / f"run_{self.current_run_id}_imminent.json"
         with open(event_file, "w") as f:
             json.dump(message, f, indent=2)
+        
+        # Send to ActiveMQ
+        self.send_message(self.destination, message)
             
         self.logger.info("Broadcasted run_imminent message", 
                          extra={"simulation_tick": self.env.now, "run_id": self.current_run_id, "msg_type": "run_imminent"})
@@ -165,6 +233,9 @@ class DAQSimulator:
         event_file = Path("daq_events") / f"run_{self.current_run_id}_start.json"
         with open(event_file, "w") as f:
             json.dump(message, f, indent=2)
+        
+        # Send to ActiveMQ
+        self.send_message(self.destination, message)
             
         self.logger.info("Broadcasted run_start message", 
                          extra={"simulation_tick": self.env.now, "run_id": self.current_run_id, "msg_type": "start_run"})
@@ -185,6 +256,9 @@ class DAQSimulator:
         event_file = Path("daq_events") / f"run_{self.current_run_id}_pause.json"
         with open(event_file, "w") as f:
             json.dump(message, f, indent=2)
+        
+        # Send to ActiveMQ
+        self.send_message(self.destination, message)
             
         self.logger.info("Broadcasted pause_run message", 
                          extra={"simulation_tick": self.env.now, "run_id": self.current_run_id, "msg_type": "pause_run"})
@@ -204,6 +278,9 @@ class DAQSimulator:
         event_file = Path("daq_events") / f"run_{self.current_run_id}_resume.json"
         with open(event_file, "w") as f:
             json.dump(message, f, indent=2)
+        
+        # Send to ActiveMQ
+        self.send_message(self.destination, message)
             
         self.logger.info("Broadcasted resume_run message", 
                          extra={"simulation_tick": self.env.now, "run_id": self.current_run_id, "msg_type": "resume_run"})
@@ -222,6 +299,9 @@ class DAQSimulator:
         event_file = Path("daq_events") / f"run_{self.current_run_id}_end.json"
         with open(event_file, "w") as f:
             json.dump(message, f, indent=2)
+        
+        # Send to ActiveMQ
+        self.send_message(self.destination, message)
             
         self.logger.info("Broadcasted run_end message", 
                          extra={"simulation_tick": self.env.now, "run_id": self.current_run_id, "msg_type": "end_run", "total_files": self.file_counter})
@@ -284,6 +364,9 @@ class DAQSimulator:
         with open(event_file, "w") as f:
             json.dump(message, f, indent=2)
         
+        # Send to ActiveMQ
+        self.send_message(self.destination, message)
+        
         self.logger.info("Generated STF and broadcasted stf_gen message", 
                          extra={"simulation_tick": self.env.now, "run_id": self.current_run_id, "stf_filename": filename, "msg_type": "stf_gen"})
         yield self.env.timeout(0.1)  # Brief generation time
@@ -319,6 +402,14 @@ def run_simulation(duration_hours=1.0, num_cycles=1):
     main_logger.info("ePIC DAQ Simulation Complete", 
                     extra={"simulation_tick_seconds": env.now, "simulation_tick_hours": env.now/3600, 
                           "total_files": daq_sim.file_counter})
+    
+    # Disconnect from ActiveMQ
+    try:
+        if daq_sim.conn and daq_sim.conn.is_connected():
+            daq_sim.conn.disconnect()
+            main_logger.info("Disconnected from ActiveMQ")
+    except Exception as e:
+        main_logger.error(f"Error disconnecting from ActiveMQ: {e}")
     
     # Report generated events
     events = list(Path("daq_events").glob("*.json"))
