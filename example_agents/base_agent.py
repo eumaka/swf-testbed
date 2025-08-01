@@ -139,9 +139,14 @@ class ExampleAgent(stomp.ConnectionListener):
         if self.api_token:
             self.api.headers.update({'Authorization': f'Token {self.api_token}'})
         
-        # For localhost development, disable SSL verification
+        # For localhost development, disable SSL verification and proxy
         if 'localhost' in self.monitor_url or '127.0.0.1' in self.monitor_url:
             self.api.verify = False
+            # Disable proxy for localhost connections
+            self.api.proxies = {
+                'http': None,
+                'https': None
+            }
             import urllib3
             urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 

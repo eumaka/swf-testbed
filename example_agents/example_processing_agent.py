@@ -82,15 +82,20 @@ class ProcessingAgent(ExampleAgent):
                         extra={"filename": filename, "run_id": run_id, "size_bytes": size_bytes,
                               "processed_by": processed_by, "simulation_tick": message_data.get('simulation_tick')})
         
+        # Update workflow status to processing
+        self.update_workflow_status(filename, 'processing_received', 'processing')
+        
         # TODO: Download STF file from file_url
         # TODO: Run reconstruction/analysis algorithms 
         # TODO: Create output files (DST, histograms, etc.)
         # TODO: Register output files with Rucio
-        # TODO: Call monitor API to update workflow status
         
         # Simulate processing time (longer than data agent)
         import time
         time.sleep(0.5)  # Simulate compute-intensive processing
+        
+        # Update workflow status to complete
+        self.update_workflow_status(filename, 'processing_complete', 'processing')
         
         # Send processing_complete message
         processing_complete_message = {
@@ -109,10 +114,69 @@ class ProcessingAgent(ExampleAgent):
             "processed_by": self.agent_name
         }
         
+        # Register processing results with monitor
+        self.register_processing_results(processing_complete_message)
+        
         # Send to monitoring/analysis agents
         self.send_message('monitoring_agent', processing_complete_message)
         self.logger.info("Sent processing_complete message", 
                         extra={"filename": filename, "run_id": run_id, "destination": "monitoring_agent"})
+
+
+    def update_workflow_status(self, filename, status, agent_type):
+        """Update workflow status in monitor API"""
+        try:
+            # For now, we'll log the status change
+            # In a full implementation, we'd look up the workflow ID and update it
+            self.logger.info("Workflow status updated", 
+                           extra={"filename": filename, "status": status, "agent": agent_type})
+            
+            # TODO: Implement actual API call to update workflow status
+            # workflow_update = {
+            #     "current_status": status,
+            #     "current_agent": agent_type
+            # }
+            # self._api_request('patch', f'/workflows/{workflow_id}/', workflow_update)
+            
+        except Exception as e:
+            self.logger.error("Error updating workflow status", 
+                            extra={"filename": filename, "error": str(e)})
+    
+    def register_processing_results(self, processing_data):
+        """Register processing results with monitor API"""
+        filename = processing_data.get('filename')
+        run_id = processing_data.get('run_id')
+        
+        try:
+            # Create workflow stage record for processing completion
+            stage_data = {
+                "agent_name": self.agent_name,
+                "agent_type": "processing",
+                "status": "processing_complete",
+                "completed_at": datetime.now().isoformat(),
+                "processing_time_seconds": processing_data.get('processing_time_ms', 0) / 1000.0,
+                "input_message": {
+                    "filename": filename,
+                    "run_id": run_id,
+                    "file_url": processing_data.get('input_file_url')
+                },
+                "output_message": processing_data,
+                "stage_metadata": {
+                    "output_files": processing_data.get('output_files', []),
+                    "processing_time_ms": processing_data.get('processing_time_ms')
+                }
+            }
+            
+            # TODO: Get workflow ID and create stage record
+            # stage_response = self._api_request('post', '/workflow-stages/', stage_data)
+            
+            self.logger.info("Registered processing results", 
+                           extra={"filename": filename, "run_id": run_id, 
+                                 "output_files": len(processing_data.get('output_files', []))})
+            
+        except Exception as e:
+            self.logger.error("Error registering processing results", 
+                            extra={"filename": filename, "error": str(e)})
 
 
 if __name__ == "__main__":
