@@ -198,6 +198,10 @@ logs/
 *.pid
 supervisord.pid
 
+# DAQ Simulator generated files
+daq_data/
+daq_events/
+
 # macOS
 .DS_Store
 .DS_Store?

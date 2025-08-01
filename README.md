@@ -19,6 +19,7 @@ requirements draft[^3].
 - [Running the Testbed](#running-the-testbed)
 - [Testing](#testing)
 - [Development Workflow](#development-workflow)
+- [Workflow Example Design](docs/workflow_example.md)
 - [Participants](#participants)
 - [Prompt Tips](#prompt-tips)
 - [Glossary](#glossary)
