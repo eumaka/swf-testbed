@@ -14,10 +14,12 @@ requirements draft[^3].
 - [Software organization](#software-organization)
 - [Testbed System Architecture](#testbed-system-architecture)
 - [Getting Started](#getting-started)
+  - [Environment Configuration](#step-2-environment-configuration)
 - [Infrastructure](#infrastructure)
 - [Running the Testbed](#running-the-testbed)
 - [Testing](#testing)
 - [Development Workflow](#development-workflow)
+- [Workflow Example Design](docs/workflow_example.md)
 - [Participants](#participants)
 - [Prompt Tips](#prompt-tips)
 - [Glossary](#glossary)
@@ -120,6 +122,18 @@ MCP server and client; we want to integrate it into the testbed. Tadashi Maeno h
 
 ### Testbed System Architecture
 
+### Database Schema
+The database schema for the monitoring system is automatically maintained in the swf-monitor repository. View the current schema:
+- [testbed-schema.dbml](https://github.com/BNLNPPS/swf-monitor/blob/main/testbed-schema.dbml)
+
+To generate the schema manually:
+```bash
+cd swf-monitor/src
+python manage.py dbml > ../testbed-schema.dbml
+```
+
+To visualize the schema, paste the DBML content into [dbdiagram.io](https://dbdiagram.io/).
+
 The following diagram shows the testbed's agent-based architecture and data flows:
 
 ```mermaid
@@ -202,7 +216,18 @@ git clone https://github.com/BNLNPPS/swf-common-lib.git
 # └── swf-common-lib/
 ```
 
-### Step 2: Set Up Infrastructure Services
+### Step 2: Environment Configuration
+
+**IMPORTANT FOR BNL/pandaserver02 DEPLOYMENT:**
+For deployments on systems with corporate proxies (like BNL pandaserver02), add this to your `~/.env` file:
+
+```bash
+NO_PROXY=localhost,127.0.0.1,0.0.0.0
+```
+
+This prevents proxy interference with local service communications (Django, ActiveMQ, PostgreSQL, WebSocket connections). Other deployment environments may have different proxy requirements.
+
+### Step 3: Set Up Infrastructure Services
 
 Choose one of the following approaches:
 

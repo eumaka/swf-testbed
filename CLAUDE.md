@@ -1,6 +1,29 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+# 🚨 MANDATORY CHECKLIST - READ FIRST - NO EXCEPTIONS 🚨
+
+**BEFORE RUNNING ANY PYTHON COMMANDS:**
+1. ✅ **ALWAYS ACTIVATE VENV FIRST**: `cd /eic/u/wenauseic/github/swf-testbed && source .venv/bin/activate`
+2. ✅ **LOAD ENVIRONMENT**: `source ~/.env` (all variables are exported)
+3. ✅ **VERIFY LOCATION**: Run `pwd` to confirm current directory
+
+**FAILURE TO FOLLOW THIS CHECKLIST CAUSES COMMAND FAILURES AND WASTES TIME**
+
+---
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository and other repositories in the swf-* family. It outlines critical thinking requirements, development practices, and operational guidelines to ensure effective and efficient coding.
+
+## ⚠️ CRITICAL RULES - ABSOLUTE REQUIREMENTS ⚠️
+
+### File Operations Rule
+**MAJOR ERROR WARNING: Deleting files, directories, database tables, databases or other entities without explicit user request or authorization is strictly forbidden and constitutes a major error. NEVER use rm, delete, DROP TABLE, or any deletion operations unless explicitly instructed by the user.**
+
+### Environment Setup Rule
+**DO NOT RUN PYTHON COMMANDS WITHOUT VENV:** Every Python command must be preceded by:
+```bash
+cd /eic/u/wenauseic/github/swf-testbed && source .venv/bin/activate && source ~/.env
+```
+**This includes:** python, pip, pytest, any example_agents scripts, or swf-testbed commands
 
 ## Critical Thinking Requirements
 
@@ -53,12 +76,13 @@ Before implementing ANY solution, Claude must explain:
 ## Development Commands
 
 ### Testing
-- `./run_tests.sh` - Run tests for swf-testbed only (uses pytest)
-- `./run_all_tests.sh` - Run tests across all swf-* repositories in parent directory
+- `./run_tests.py` - Run tests for swf-testbed only (uses pytest)
+- `./run_all_tests.py` - Run tests across all swf-* repositories in parent directory
 - Tests are located in `tests/` directory and use pytest framework
 - **Auto-activation**: Test scripts automatically activate the virtual environment if needed
-  - Just run `./run_all_tests.sh` directly - no manual setup required!
+  - Just run `./run_all_tests.py` directly - no manual setup required!
   - Scripts set up their own environment variables internally
+  - **EXAMPLE AGENTS NEED THE SAME PATTERN** - they should auto-load venv and ~/.env
 
 ### Testbed Management
 - `swf-testbed init` - Initialize environment (creates logs/ directory and supervisord.conf)
@@ -70,11 +94,18 @@ Before implementing ANY solution, Claude must explain:
 - `swf-testbed status-local` - Check status of local services and agents
 
 ### Installation and Dependencies
-**CRITICAL: Always activate virtual environment first: `source .venv/bin/activate`**
-- `source .venv/bin/activate && pip install -e .` - Install in development mode (from swf-testbed directory)
+**🚨 CRITICAL: ALWAYS ACTIVATE VIRTUAL ENVIRONMENT FIRST 🚨**
+
+**EVERY PYTHON COMMAND MUST START WITH:**
+```bash
+cd /eic/u/wenauseic/github/swf-testbed && source .venv/bin/activate && source ~/.env
+```
+
+**Commands:**
+- `source .venv/bin/activate && source ~/.env && pip install -e .` - Install in development mode
 - Dependencies managed via `pyproject.toml`
-- `source .venv/bin/activate && pip install .[test]` - Install test dependencies
-- Virtual environment located at `.venv/` - ALWAYS activate before any Python commands
+- `source .venv/bin/activate && source ~/.env && pip install .[test]` - Install test dependencies
+- Virtual environment located at `.venv/` - **NEVER SKIP ACTIVATION**
 
 **Initial Setup**
 - Run `source install.sh` once when setting up the development environment
@@ -172,14 +203,34 @@ This maintenance should be part of any commit that involves adding, removing, or
 - **PostgreSQL**: Database for monitoring and metadata storage
 - **supervisord**: Process management for Python agents
 
-## AI Development Guidelines
+## 🤖 AI Development Guidelines - MANDATORY FOR CLAUDE
+
+### Environment Setup (Critical - Most Common Failure Point)
+**RULE: NO PYTHON COMMANDS WITHOUT ENVIRONMENT SETUP**
+
+**Before ANY Python operation, you MUST run:**
+```bash
+cd /eic/u/wenauseic/github/swf-testbed && source .venv/bin/activate && source ~/.env
+```
+
+**This applies to:**
+- `python example_agents/daq_simulator.py`
+- `pip install anything`
+- `pytest tests/`
+- `swf-testbed` commands
+- Any Python script execution
+
+**Why this fails:**
+- Environment variables from ~/.env are not available to subprocesses
+- Virtual environment packages are not in PATH
+- Proxy settings (NO_PROXY) are not loaded
+- Database credentials are missing
 
 ### Directory Awareness (Critical for Claude)
-- **ALWAYS use $SWF_PARENT_DIR for navigation** - Never use relative paths like `../swf-monitor`
+- **ALWAYS use absolute paths** - Never use relative paths like `../swf-monitor`
 - **ALWAYS run `pwd` before any file operations** - Claude frequently loses track of current directory
 - **NEVER assume your location** - explicitly verify with `pwd` at start of file access attempts
-- **Use absolute paths**: `cd $SWF_PARENT_DIR/swf-testbed` not `cd swf-testbed`
-- **For file operations**: Use `$SWF_PARENT_DIR/swf-monitor/.env` not `../swf-monitor/.env`
+- **Use full paths**: `/eic/u/wenauseic/github/swf-testbed` not `swf-testbed`
 - This is a recurring Claude issue that causes confusion and wasted time
 
 ### Git Branch Management
@@ -193,3 +244,59 @@ This maintenance should be part of any commit that involves adding, removing, or
 2. First push: `git push -u origin branch-name` (sets up tracking)
 3. Subsequent pushes: `git push` (tracking already established)
 4. Always verify tracking is set up correctly before proceeding
+
+## 📝 Example Agent Environment Auto-Loading Pattern
+
+**ALL example agent scripts should include environment auto-loading like the test scripts:**
+
+```python
+#!/usr/bin/env python3
+import os
+import sys
+from pathlib import Path
+
+def setup_environment():
+    """Auto-activate venv and load environment variables."""
+    script_dir = Path(__file__).resolve().parent.parent  # Go up to swf-testbed root
+    
+    # Auto-activate virtual environment if not already active
+    if "VIRTUAL_ENV" not in os.environ:
+        venv_path = script_dir / ".venv"
+        if venv_path.exists():
+            print("🔧 Auto-activating virtual environment...")
+            venv_python = venv_path / "bin" / "python"
+            if venv_python.exists():
+                os.environ["VIRTUAL_ENV"] = str(venv_path)
+                os.environ["PATH"] = f"{venv_path}/bin:{os.environ['PATH']}"
+                sys.executable = str(venv_python)
+        else:
+            print("❌ Error: No Python virtual environment found")
+            return False
+    
+    # Load ~/.env environment variables (they're already exported)
+    env_file = Path.home() / ".env"
+    if env_file.exists():
+        print("🔧 Loading environment variables from ~/.env...")
+        with open(env_file) as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith('#') and '=' in line:
+                    if line.startswith('export '):
+                        line = line[7:]  # Remove 'export '
+                    key, value = line.split('=', 1)
+                    os.environ[key] = value.strip('"\'')
+    
+    return True
+
+if __name__ == "__main__":
+    if not setup_environment():
+        sys.exit(1)
+    
+    # Your agent code here...
+```
+
+**This pattern ensures:**
+- Virtual environment is automatically activated
+- All ~/.env variables are loaded (NO_PROXY, SWF_MONITOR_HTTP_URL, etc.)
+- Scripts work regardless of how they're invoked
+- No more "command not found" or proxy failures

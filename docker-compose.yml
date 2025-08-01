@@ -5,7 +5,7 @@ services:
     ports:
       - "8161:8161" # Web console
       - "61616:61616" # Core protocol port
-      - "61613:61613" # STOMP protocol port
+      - "61612:61613" # STOMP protocol port - map to 61612 to match production
     environment:
       - ARTEMIS_USER=admin
       - ARTEMIS_PASSWORD=admin

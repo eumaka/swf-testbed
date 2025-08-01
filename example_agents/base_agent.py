@@ -3,11 +3,59 @@ This module contains the base class for all example agents.
 """
 
 import os
+import sys
 import time
 import stomp
 import requests
 import json
 import logging
+from pathlib import Path
+
+def setup_environment():
+    """Auto-activate venv and load environment variables."""
+    script_dir = Path(__file__).resolve().parent.parent  # Go up to swf-testbed root
+    
+    # Auto-activate virtual environment if not already active
+    if "VIRTUAL_ENV" not in os.environ:
+        venv_path = script_dir / ".venv"
+        if venv_path.exists():
+            print("🔧 Auto-activating virtual environment...")
+            venv_python = venv_path / "bin" / "python"
+            if venv_python.exists():
+                os.environ["VIRTUAL_ENV"] = str(venv_path)
+                os.environ["PATH"] = f"{venv_path}/bin:{os.environ['PATH']}"
+                sys.executable = str(venv_python)
+        else:
+            print("❌ Error: No Python virtual environment found")
+            return False
+    
+    # Load ~/.env environment variables (they're already exported)
+    env_file = Path.home() / ".env"
+    if env_file.exists():
+        print("🔧 Loading environment variables from ~/.env...")
+        with open(env_file) as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith('#') and '=' in line:
+                    if line.startswith('export '):
+                        line = line[7:]  # Remove 'export '
+                    key, value = line.split('=', 1)
+                    os.environ[key] = value.strip('"\'')
+    
+    # Unset proxy variables to prevent localhost routing through proxy
+    for proxy_var in ['http_proxy', 'https_proxy', 'HTTP_PROXY', 'HTTPS_PROXY']:
+        if proxy_var in os.environ:
+            del os.environ[proxy_var]
+    
+    return True
+
+# Auto-setup environment when module is imported (unless already done)
+if not os.getenv('SWF_ENV_LOADED'):
+    setup_environment()
+    os.environ['SWF_ENV_LOADED'] = 'true'
+
+# Import the centralized logging from swf-common-lib
+from swf_common_lib.rest_logging import setup_rest_logging
 
 # Enable STOMP debug logging to see connection details
 logging.basicConfig(level=logging.DEBUG, 
@@ -46,24 +94,56 @@ class ExampleAgent(stomp.ConnectionListener):
 
         # Configuration from environment variables
         self.monitor_url = os.getenv('SWF_MONITOR_URL', 'http://localhost:8002').rstrip('/')
-        self.base_url = self.monitor_url  # For REST logging
+        # Use HTTP URL for REST logging (no auth required)
+        self.base_url = os.getenv('SWF_MONITOR_HTTP_URL', 'http://localhost:8002').rstrip('/')
         self.api_token = os.getenv('SWF_API_TOKEN')
         self.mq_host = os.getenv('ACTIVEMQ_HOST', 'localhost')
-        self.mq_port = int(os.getenv('ACTIVEMQ_PORT', 61613))  # STOMP port for Artemis
+        self.mq_port = int(os.getenv('ACTIVEMQ_PORT', 61612))  # STOMP port for Artemis on this system
         self.mq_user = os.getenv('ACTIVEMQ_USER', 'admin')
         self.mq_password = os.getenv('ACTIVEMQ_PASSWORD', 'admin')
         
-        # Set up proper logging
-        self.setup_logging()
+        # SSL configuration
+        self.use_ssl = os.getenv('ACTIVEMQ_USE_SSL', 'False').lower() == 'true'
+        self.ssl_ca_certs = os.getenv('ACTIVEMQ_SSL_CA_CERTS', '')
+        self.ssl_cert_file = os.getenv('ACTIVEMQ_SSL_CERT_FILE', '')
+        self.ssl_key_file = os.getenv('ACTIVEMQ_SSL_KEY_FILE', '')
+        
+        # Set up centralized REST logging
+        self.logger = setup_rest_logging('example_agent', self.agent_name, self.base_url)
 
+        # Create connection matching swf-common-lib working example
         self.conn = stomp.Connection(
             host_and_ports=[(self.mq_host, self.mq_port)],
-            heartbeats=(10000, 10000)
+            vhost=self.mq_host,
+            try_loopback_connect=False
         )
+        
+        # Configure SSL if enabled - must be done before set_listener
+        if self.use_ssl:
+            import ssl
+            logging.info(f"Configuring SSL connection with CA certs: {self.ssl_ca_certs}")
+            
+            if self.ssl_ca_certs:
+                # Configure SSL transport
+                self.conn.transport.set_ssl(
+                    for_hosts=[(self.mq_host, self.mq_port)],
+                    ca_certs=self.ssl_ca_certs,
+                    ssl_version=ssl.PROTOCOL_TLS_CLIENT
+                )
+                logging.info("SSL transport configured successfully")
+            else:
+                logging.warning("SSL enabled but no CA certificate file specified")
+        
         self.conn.set_listener('', self)
         self.api = requests.Session()
         if self.api_token:
             self.api.headers.update({'Authorization': f'Token {self.api_token}'})
+        
+        # For localhost development, disable SSL verification
+        if 'localhost' in self.monitor_url or '127.0.0.1' in self.monitor_url:
+            self.api.verify = False
+            import urllib3
+            urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
     def run(self):
         """
@@ -71,13 +151,25 @@ class ExampleAgent(stomp.ConnectionListener):
         """
         logging.info(f"Starting {self.agent_name}...")
         logging.info(f"Connecting to ActiveMQ at {self.mq_host}:{self.mq_port} with user '{self.mq_user}'")
-        print(f"DEBUG: About to connect to {self.mq_host}:{self.mq_port}")
+        
+        # Track MQ connection status
+        self.mq_connected = False
+        
         try:
-            print("DEBUG: Calling conn.connect()...")
-            self.conn.connect(self.mq_user, self.mq_password, wait=True)
-            print("DEBUG: Connection successful!")
+            logging.debug("Attempting STOMP connection with version 1.2...")
+            # Use STOMP version 1.2 with client-id as per working example
+            self.conn.connect(
+                self.mq_user, 
+                self.mq_password, 
+                wait=True, 
+                version='1.2',
+                headers={'client-id': self.agent_name}
+            )
+            self.mq_connected = True
+            logging.info("Successfully connected to ActiveMQ")
+            
             self.conn.subscribe(destination=self.subscription_queue, id=1, ack='auto')
-            logging.info(f"Connected to ActiveMQ and subscribed to '{self.subscription_queue}'")
+            logging.info(f"Subscribed to queue: '{self.subscription_queue}'")
             
             # Initial registration/heartbeat
             self.send_heartbeat()
@@ -89,17 +181,36 @@ class ExampleAgent(stomp.ConnectionListener):
 
         except KeyboardInterrupt:
             logging.info(f"Stopping {self.agent_name}...")
-        except stomp.exception.ConnectFailedException:
-            logging.error("Failed to connect to ActiveMQ. Please check the connection details.")
+        except stomp.exception.ConnectFailedException as e:
+            self.mq_connected = False
+            logging.error(f"Failed to connect to ActiveMQ: {e}")
+            logging.error("Please check the connection details and ensure ActiveMQ is running.")
         except Exception as e:
+            self.mq_connected = False
             logging.error(f"An unexpected error occurred: {e}")
+            import traceback
+            traceback.print_exc()
         finally:
             if self.conn and self.conn.is_connected():
                 self.conn.disconnect()
+                self.mq_connected = False
                 logging.info("Disconnected from ActiveMQ.")
 
+    def on_connected(self, frame):
+        """Handle successful connection to ActiveMQ."""
+        logging.info(f"Successfully connected to ActiveMQ: {frame.headers}")
+        self.mq_connected = True
+    
     def on_error(self, frame):
         logging.error(f'Received an error from ActiveMQ: {frame.body}')
+        self.mq_connected = False
+    
+    def on_disconnected(self):
+        """Handle disconnection from ActiveMQ."""
+        logging.warning("Disconnected from ActiveMQ")
+        self.mq_connected = False
+        # Send heartbeat to update status
+        self.send_heartbeat()
 
     def on_message(self, frame):
         """
@@ -133,34 +244,26 @@ class ExampleAgent(stomp.ConnectionListener):
 
     def send_heartbeat(self):
         """Registers the agent and sends a heartbeat to the monitor."""
-        self.logger.info("Attempting to send heartbeat...")
-        logging.info("Sending heartbeat...")
+        logging.info("Sending heartbeat to monitor...")
+        
+        # Determine overall status based on MQ connection
+        status = "OK" if getattr(self, 'mq_connected', False) else "WARNING"
+        
+        # Build description with connection details
+        mq_status = "connected" if getattr(self, 'mq_connected', False) else "disconnected"
+        description = f"Example {self.agent_type} agent. MQ: {mq_status}"
+        
         payload = {
             "instance_name": self.agent_name,
             "agent_type": self.agent_type,
-            "status": "OK",
-            "description": f"Example {self.agent_type} agent."
+            "status": status,
+            "description": description,
+            "mq_connected": getattr(self, 'mq_connected', False)  # Include MQ status in payload
         }
-        self._api_request('post', '/systemagents/heartbeat/', payload)
+        
+        result = self._api_request('post', '/systemagents/heartbeat/', payload)
+        if result:
+            logging.info(f"Heartbeat sent successfully. Status: {status}, MQ: {mq_status}")
+        else:
+            logging.warning("Failed to send heartbeat to monitor")
 
-    def setup_logging(self):
-        """Set up proper REST logging using swf-common-lib."""
-        try:
-            from swf_common_lib.rest_logging import setup_rest_logging
-            # Use the proper REST logging infrastructure
-            self.logger = setup_rest_logging(
-                app_name="example_agent",
-                instance_name=self.agent_name,
-                base_url=self.base_url
-            )
-        except ImportError:
-            # Fallback to basic logging if swf-common-lib not available
-            import logging
-            self.logger = logging.getLogger(f"example_agent.{self.agent_name}")
-            if not self.logger.handlers:
-                handler = logging.StreamHandler()
-                formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(name)s - %(message)s')
-                handler.setFormatter(formatter)
-                self.logger.addHandler(handler)
-                self.logger.setLevel(logging.INFO)
-            print(f"WARNING: swf-common-lib not found, using basic console logging")
