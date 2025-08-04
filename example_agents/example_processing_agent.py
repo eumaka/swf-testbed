@@ -266,17 +266,6 @@ class ProcessingAgent(ExampleAgent):
                               "monitor_file_id": monitor_file_id, "monitor_task_id": task_id})
 
 
-    def update_workflow_status(self, filename, status, agent_type):
-        """Update workflow status in monitor API (legacy method for compatibility)"""
-        try:
-            # This is now handled by the new processing agent specific methods above
-            # Keeping this method for backward compatibility and logging
-            self.logger.info("Workflow status updated via new processing agent specific methods", 
-                           extra={"filename": filename, "status": status, "agent": agent_type})
-            
-        except Exception as e:
-            self.logger.error("Error in legacy workflow status update", 
-                            extra={"filename": filename, "error": str(e)})
     
     def register_processing_results(self, processing_data):
         """Register processing results with monitor API (legacy method for compatibility)"""

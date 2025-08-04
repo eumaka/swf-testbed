@@ -61,9 +61,24 @@ class DAQSimulator:
     
     def __init__(self, env):
         self.env = env
-        self.run_counter = 100001
         self.file_counter = 0  # Serial counter for unique filenames across all runs
         self.current_run_id = None
+        
+        # Monitor API configuration
+        self.monitor_url = os.getenv('SWF_MONITOR_URL', 'https://localhost:8443')
+        self.api_token = os.getenv('SWF_API_TOKEN')
+        
+        # Set up API session
+        import requests
+        self.api_session = requests.Session()
+        if self.api_token:
+            self.api_session.headers.update({'Authorization': f'Token {self.api_token}'})
+        
+        # For localhost development, disable SSL verification
+        if 'localhost' in self.monitor_url:
+            self.api_session.verify = False
+            import urllib3
+            urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
         
         # STF generation parameters
         self.stf_interval = 2  # STFs every 2 seconds during physics (~0.5Hz)
@@ -77,6 +92,25 @@ class DAQSimulator:
         
         # Setup ActiveMQ connection
         self.setup_activemq()
+    
+    def get_next_run_number(self):
+        """Get the next run number from persistent state API."""
+        try:
+            url = f"{self.monitor_url}/api/state/next-run-number/"
+            response = self.api_session.post(url, timeout=10)
+            response.raise_for_status()
+            
+            data = response.json()
+            if data.get('status') == 'success':
+                run_number = data.get('run_number')
+                self.logger.info(f"Got next run number from persistent state: {run_number}")
+                return str(run_number)  # Return as string for consistency
+            else:
+                raise RuntimeError(f"API returned error: {data.get('error', 'Unknown error')}")
+                
+        except Exception as e:
+            self.logger.error(f"Failed to get next run number from API: {e}")
+            raise RuntimeError(f"Critical failure getting run number: {e}") from e
         
     def setup_activemq(self):
         """Setup connection to ActiveMQ broker using same pattern as base_agent"""
@@ -108,13 +142,16 @@ class DAQSimulator:
             )
         
         try:
-            # Connect with STOMP version 1.2
+            # Connect with STOMP version 1.1
             self.conn.connect(
                 self.mq_user, 
                 self.mq_password, 
                 wait=True, 
-                version='1.2',
-                headers={'client-id': 'daqsim-simulator'}
+                version='1.1',
+                headers={
+                    'client-id': 'daqsim-simulator',
+                    'heart-beat': '30000,3600000'  # Send heartbeat every 30sec, timeout after 1hr
+                }
             )
             self.logger.info("Successfully connected to ActiveMQ")
             
@@ -137,55 +174,54 @@ class DAQSimulator:
         """Complete DAQ cycle following state transitions"""
         self.logger.info("Starting DAQ cycle", extra={"simulation_tick": self.env.now})
         
-        # State 1: no_beam / not_ready (5 minutes)
+        # State 1: no_beam / not_ready (5 seconds - fast test)
         self.logger.info("DAQ State -> no_beam/not_ready (Collider not operating)", 
                         extra={"simulation_tick": self.env.now, "state": "no_beam", "substate": "not_ready"})
-        yield self.env.timeout(5 * 60)  # 5 minutes
+        yield self.env.timeout(5)  # 5 seconds
         
-        # State 2: beam / not_ready (5 minutes) + broadcast run imminent
+        # State 2: beam / not_ready (5 seconds - fast test) + broadcast run imminent
         self.logger.info("DAQ State -> beam/not_ready (Run start imminent)", 
                         extra={"simulation_tick": self.env.now, "state": "beam", "substate": "not_ready"})
-        self.current_run_id = str(self.run_counter)
-        self.run_counter += 1
+        self.current_run_id = self.get_next_run_number()
         
         # Broadcast run imminent message
         yield self.env.process(self.broadcast_run_imminent())
-        yield self.env.timeout(5 * 60)  # 5 minutes
+        yield self.env.timeout(5)  # 5 seconds
         
-        # State 3: beam / ready (1 minute)
+        # State 3: beam / ready (2 seconds - fast test)
         self.logger.info("DAQ State -> beam/ready (Ready for physics)", 
                         extra={"simulation_tick": self.env.now, "state": "beam", "substate": "ready"})
-        yield self.env.timeout(1 * 60)  # 1 minute
+        yield self.env.timeout(2)  # 2 seconds
         
-        # State 4: run / physics (5 minutes) + run start + STF generation
+        # State 4: run / physics (10 seconds = 5 STFs) + run start + STF generation
         self.logger.info("DAQ State -> run/physics (Physics datataking period 1)", 
                         extra={"simulation_tick": self.env.now, "state": "run", "substate": "physics", "physics_period": 1})
         yield self.env.process(self.broadcast_run_start())
         
-        # Start STF generation for physics period 1 (5 minutes)
-        stf_process_1 = self.env.process(self.generate_stfs_during_physics(5 * 60))
+        # Start STF generation for physics period 1 (10 seconds = 5 STFs)
+        stf_process_1 = self.env.process(self.generate_stfs_during_physics(10))
         yield stf_process_1
         
-        # State 5: run / standby (30 seconds)
+        # State 5: run / standby (2 seconds - fast test)
         self.logger.info("DAQ State -> run/standby (Brief standby)", 
                         extra={"simulation_tick": self.env.now, "state": "run", "substate": "standby"})
         yield self.env.process(self.broadcast_pause_run())
-        yield self.env.timeout(30)  # 30 seconds
+        yield self.env.timeout(2)  # 2 seconds
         
-        # State 6: run / physics (3 minutes) + STF generation
+        # State 6: run / physics (10 seconds = 5 STFs) + STF generation
         self.logger.info("DAQ State -> run/physics (Physics datataking period 2)", 
                         extra={"simulation_tick": self.env.now, "state": "run", "substate": "physics"})
         yield self.env.process(self.broadcast_resume_run())
         
-        # Start STF generation for physics period 2 (3 minutes)
-        stf_process_2 = self.env.process(self.generate_stfs_during_physics(3 * 60))
+        # Start STF generation for physics period 2 (10 seconds = 5 STFs)
+        stf_process_2 = self.env.process(self.generate_stfs_during_physics(10))
         yield stf_process_2
         
-        # State 7: beam / not_ready (3 minutes) + run end
+        # State 7: beam / not_ready (5 seconds - fast test) + run end
         self.logger.info("DAQ State -> beam/not_ready (Run ended by shifters)", 
                         extra={"simulation_tick": self.env.now, "state": "beam", "substate": "not_ready"})
         yield self.env.process(self.broadcast_run_end())
-        yield self.env.timeout(3 * 60)  # 3 minutes
+        yield self.env.timeout(5)  # 5 seconds
         
         # State 8: no_beam / not_ready (final)
         self.logger.info("DAQ State -> no_beam/not_ready (Collider shutdown)", 
@@ -423,8 +459,9 @@ def run_simulation(duration_hours=1.0, num_cycles=1):
                 data = json.load(f)
                 msg_type = data.get("msg_type", "unknown")
                 event_types[msg_type] = event_types.get(msg_type, 0) + 1
-        except:
-            pass
+        except (json.JSONDecodeError, IOError, KeyError) as e:
+            main_logger.error(f"Failed to process event file {event_file}: {e}")
+            # Don't crash here since this is just summary reporting
     
     for msg_type, count in event_types.items():
         main_logger.info("Event type summary", extra={"msg_type": msg_type, "count": count})
