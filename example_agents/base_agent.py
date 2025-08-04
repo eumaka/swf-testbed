@@ -238,7 +238,7 @@ class ExampleAgent(stomp.ConnectionListener):
         """
         Helper method to make a request to the monitor API.
         """
-        url = f"{self.monitor_url}/api/v1{endpoint}"
+        url = f"{self.monitor_url}/api{endpoint}"
         try:
             response = self.api.request(method, url, json=json_data, timeout=10)
             response.raise_for_status()  # Raise an exception for bad status codes
@@ -271,4 +271,86 @@ class ExampleAgent(stomp.ConnectionListener):
             logging.info(f"Heartbeat sent successfully. Status: {status}, MQ: {mq_status}")
         else:
             logging.warning("Failed to send heartbeat to monitor")
+    
+    def send_enhanced_heartbeat(self, workflow_metadata=None):
+        """Send heartbeat with optional workflow metadata."""
+        logging.info("Sending enhanced heartbeat to monitor...")
+        
+        # Determine overall status based on MQ connection
+        status = "OK" if getattr(self, 'mq_connected', False) else "WARNING"
+        
+        # Build description with connection details
+        mq_status = "connected" if getattr(self, 'mq_connected', False) else "disconnected"
+        description_parts = [f"Example {self.agent_type} agent", f"MQ: {mq_status}"]
+        
+        # Add workflow context if provided
+        if workflow_metadata:
+            for key, value in workflow_metadata.items():
+                description_parts.append(f"{key}: {value}")
+        
+        description = ". ".join(description_parts)
+        
+        payload = {
+            "instance_name": self.agent_name,
+            "agent_type": self.agent_type,
+            "status": status,
+            "description": description,
+            "mq_connected": getattr(self, 'mq_connected', False),
+            # Include workflow metadata in agent record
+            "workflow_enabled": True if workflow_metadata else False,
+            "current_stf_count": workflow_metadata.get('active_tasks', 0) if workflow_metadata else 0,
+            "total_stf_processed": workflow_metadata.get('completed_tasks', 0) if workflow_metadata else 0
+        }
+        
+        result = self._api_request('post', '/systemagents/heartbeat/', payload)
+        if result:
+            logging.info(f"Enhanced heartbeat sent successfully")
+            return True
+        else:
+            logging.warning("Failed to send enhanced heartbeat to monitor")
+            return False
+    
+    def report_agent_status(self, status, message=None, error_details=None):
+        """Report agent status change to monitor."""
+        logging.info(f"Reporting agent status: {status}")
+        
+        description_parts = [f"Example {self.agent_type} agent"]
+        if message:
+            description_parts.append(message)
+        if error_details:
+            description_parts.append(f"Error: {error_details}")
+        
+        payload = {
+            "instance_name": self.agent_name,
+            "agent_type": self.agent_type,
+            "status": status,
+            "description": ". ".join(description_parts),
+            "mq_connected": getattr(self, 'mq_connected', False)
+        }
+        
+        result = self._api_request('post', '/systemagents/heartbeat/', payload)
+        if result:
+            logging.info(f"Status reported successfully: {status}")
+            return True
+        else:
+            logging.warning(f"Failed to report status: {status}")
+            return False
+    
+    def check_monitor_health(self):
+        """Check if monitor API is available."""
+        try:
+            result = self._api_request('get', '/systemagents/', None)
+            if result is not None:
+                logging.info("Monitor API is healthy")
+                return True
+            else:
+                logging.warning("Monitor API is not responding")
+                return False
+        except Exception as e:
+            logging.error(f"Monitor health check failed: {e}")
+            return False
+    
+    def call_monitor_api(self, method, endpoint, json_data=None):
+        """Generic monitor API call method for agent-specific implementations."""
+        return self._api_request(method.lower(), endpoint, json_data)
 

@@ -43,15 +43,15 @@ export SWF_API_TOKEN=your_token_here
 
 Require `Authorization: Token <token>` header:
 
-- `POST /api/v1/runs/` - Create run records
-- `POST /api/v1/stf-files/` - Register STF files
-- `POST /api/v1/workflows/` - Create workflow records
-- `POST /api/v1/workflow-stages/` - Track processing stages
+- `POST /api/runs/` - Create run records
+- `POST /api/stf-files/` - Register STF files
+- `POST /api/workflows/` - Create workflow records
+- `POST /api/workflow-stages/` - Track processing stages
 
 ### REST Logging (HTTP - port 8002)
 
 No authentication required:
-- `POST /api/v1/logs/` - Agent logging endpoint
+- `POST /api/logs/` - Agent logging endpoint
 
 ## Getting API Token
 

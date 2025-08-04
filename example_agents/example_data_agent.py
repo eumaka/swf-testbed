@@ -15,6 +15,8 @@ class DataAgent(ExampleAgent):
 
     def __init__(self):
         super().__init__(agent_type='DATA', subscription_queue='epictopic')
+        self.active_runs = {}  # Track active runs and their monitor IDs
+        self.active_files = {}  # Track STF files being processed
 
     def on_message(self, frame):
         """
@@ -37,6 +39,119 @@ class DataAgent(ExampleAgent):
                 self.logger.info("Ignoring unknown message type", extra={"msg_type": msg_type})
         except Exception as e:
             self.logger.error("Error processing message", extra={"error": str(e)})
+    
+    # Data agent specific monitor integration methods
+    def create_run_record(self, run_id, run_conditions):
+        """Create a run record in the monitor."""
+        self.logger.info(f"Creating run record {run_id} in monitor...")
+        
+        run_data = {
+            'run_number': run_id,
+            'start_time': datetime.now().isoformat(),
+            'run_conditions': run_conditions
+        }
+        
+        result = self.call_monitor_api('POST', '/runs/', run_data)
+        if result:
+            monitor_run_id = result.get('run_id')
+            self.active_runs[run_id] = {
+                'monitor_run_id': monitor_run_id,
+                'files_created': 0,
+                'total_files': 0
+            }
+            self.logger.info(f"Run {run_id} registered in monitor with ID {monitor_run_id}")
+            return monitor_run_id
+        else:
+            self.logger.warning(f"Failed to register run {run_id} in monitor")
+            return None
+    
+    def update_run_status(self, run_id, status='completed'):
+        """Update run status in the monitor."""
+        if run_id not in self.active_runs:
+            self.logger.warning(f"Run {run_id} not found in active runs")
+            return False
+            
+        monitor_run_id = self.active_runs[run_id]['monitor_run_id']
+        self.logger.info(f"Updating run {run_id} status to {status} in monitor...")
+        
+        update_data = {
+            'end_time': datetime.now().isoformat()
+        }
+        
+        result = self.call_monitor_api('PATCH', f'/runs/{monitor_run_id}/', update_data)
+        if result:
+            self.logger.info(f"Run {run_id} status updated successfully")
+            return True
+        else:
+            self.logger.warning(f"Failed to update run {run_id} status")
+            return False
+    
+    def register_stf_file(self, run_id, filename, file_size=None):
+        """Register an STF file in the monitor."""
+        if run_id not in self.active_runs:
+            self.logger.warning(f"Cannot register file {filename} - run {run_id} not active")
+            return None
+            
+        monitor_run_id = self.active_runs[run_id]['monitor_run_id']
+        self.logger.info(f"Registering STF file {filename} in monitor...")
+        
+        file_data = {
+            'run': monitor_run_id,
+            'file_url': f"file:///data/stf/{filename}",
+            'file_size_bytes': file_size,
+            'machine_state': 'physics',
+            'status': 'registered',
+            'metadata': {'created_by': self.agent_name}
+        }
+        
+        result = self.call_monitor_api('POST', '/stf-files/', file_data)
+        if result:
+            file_id = result.get('file_id')
+            self.active_files[filename] = {
+                'file_id': file_id,
+                'run_id': run_id,
+                'status': 'registered'
+            }
+            self.active_runs[run_id]['files_created'] += 1
+            self.logger.info(f"STF file {filename} registered with ID {file_id}")
+            return file_id
+        else:
+            self.logger.warning(f"Failed to register STF file {filename}")
+            return None
+    
+    def update_stf_file_status(self, filename, status):
+        """Update STF file status in the monitor."""
+        if filename not in self.active_files:
+            self.logger.warning(f"File {filename} not found in active files")
+            return False
+            
+        file_info = self.active_files[filename]
+        file_id = file_info['file_id']
+        self.logger.info(f"Updating STF file {filename} status to {status}...")
+        
+        update_data = {
+            'status': status,
+            'metadata': {'processed_by': self.agent_name, 'updated_at': datetime.now().isoformat()}
+        }
+        
+        result = self.call_monitor_api('PATCH', f'/stf-files/{file_id}/', update_data)
+        if result:
+            self.active_files[filename]['status'] = status
+            self.logger.info(f"STF file {filename} status updated to {status}")
+            return True
+        else:
+            self.logger.warning(f"Failed to update STF file {filename} status")
+            return False
+    
+    def send_data_agent_heartbeat(self):
+        """Send enhanced heartbeat with data agent context."""
+        workflow_metadata = {
+            'active_runs': len(self.active_runs),
+            'active_files': len(self.active_files),
+            'completed_tasks': sum(run['files_created'] for run in self.active_runs.values())
+        }
+        
+        return self.send_enhanced_heartbeat(workflow_metadata)
 
     def handle_run_imminent(self, message_data):
         """Handle run_imminent message - create dataset in Rucio"""
@@ -46,12 +161,15 @@ class DataAgent(ExampleAgent):
                         extra={"run_id": run_id, "simulation_tick": message_data.get('simulation_tick')})
         
         # Create run record in monitor
-        self.create_run_record(run_id, run_conditions)
+        monitor_run_id = self.create_run_record(run_id, run_conditions)
         
         # TODO: Call Rucio to create dataset for this run
         
         # Simulate dataset creation
-        self.logger.info("Created dataset for run", extra={"run_id": run_id})
+        if monitor_run_id:
+            self.logger.info("Created dataset for run", extra={"run_id": run_id, "monitor_run_id": monitor_run_id})
+        else:
+            self.logger.warning("Dataset created but monitor registration failed", extra={"run_id": run_id})
 
     def handle_start_run(self, message_data):
         """Handle start_run message - run is starting physics"""
@@ -59,7 +177,9 @@ class DataAgent(ExampleAgent):
         self.logger.info("Processing start_run message", 
                         extra={"run_id": run_id, "simulation_tick": message_data.get('simulation_tick')})
         
-        # TODO: Update run status in monitor API
+        # Send enhanced heartbeat with run context
+        self.send_data_agent_heartbeat()
+        
         self.logger.info("Run started", extra={"run_id": run_id})
 
     def handle_end_run(self, message_data):
@@ -69,8 +189,18 @@ class DataAgent(ExampleAgent):
         self.logger.info("Processing end_run message", 
                         extra={"run_id": run_id, "total_files": total_files, "simulation_tick": message_data.get('simulation_tick')})
         
+        # Update run status in monitor API
+        if run_id in self.active_runs:
+            self.active_runs[run_id]['total_files'] = total_files
+            self.update_run_status(run_id, 'completed')
+        
         # TODO: Finalize dataset in Rucio
-        # TODO: Update run status in monitor API
+        
+        # Send final heartbeat and clean up
+        self.send_data_agent_heartbeat()
+        if run_id in self.active_runs:
+            del self.active_runs[run_id]
+        
         self.logger.info("Run ended", extra={"run_id": run_id, "total_files": total_files})
 
     def handle_stf_gen(self, message_data):

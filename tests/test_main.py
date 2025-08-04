@@ -22,8 +22,9 @@ def test_environment(tmp_path):
     # Teardown: clean up by changing back to the original directory
     os.chdir(cwd)
 
+@patch('swf_testbed_cli.main._check_supervisord_running', return_value=False)
 @patch('subprocess.run')
-def test_start(mock_run, test_environment):
+def test_start(mock_run, mock_check_supervisord, test_environment):
     """Test the start command."""
     # Arrange
     (test_environment / "supervisord.conf").touch()
@@ -35,8 +36,9 @@ def test_start(mock_run, test_environment):
 
     # Assert
     assert result.exit_code == 0
-    assert mock_run.call_count == 2
+    assert mock_run.call_count == 3  # docker compose up, supervisord start, supervisorctl start
     mock_run.assert_any_call(["docker", "compose", "up", "-d"])
+    mock_run.assert_any_call(["supervisord", "-c", "supervisord.conf"])
     mock_run.assert_any_call(["supervisorctl", "-c", "supervisord.conf", "start", "all"])
     assert "Starting testbed services..." in result.stdout
 

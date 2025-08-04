@@ -360,7 +360,7 @@ pip install -e .
 
 1. **Check web interfaces:**
    - **Monitor dashboard**: http://localhost:8002/ (main interface)
-   - **Monitor HTTPS API**: https://localhost:8443/api/v1/ (authenticated API)
+   - **Monitor HTTPS API**: https://localhost:8443/api/ (authenticated API)
    - **Django admin**: http://localhost:8002/admin/ (use superuser credentials created in Step 5)
    - **ActiveMQ console**: http://localhost:8161/admin/ (admin/admin)
 
