@@ -53,4 +53,4 @@ Create consistent, performant list views across all monitor pages using DataTabl
 - All list views use same DataTables pattern
 - Sub-second response times for paginated data
 - Bookmarkable URLs, fast navigation
-- Shared code reduces duplication by 80%
+- Shared code reduces duplication by 80%wYw

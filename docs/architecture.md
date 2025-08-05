@@ -106,6 +106,24 @@ MCP server and client; we want to integrate it into the testbed. Tadashi Maeno h
 
 ### Testbed System Architecture
 
+### Deployment Modes
+
+The testbed supports two deployment modes:
+
+**Development Mode** (Docker-managed infrastructure):
+- PostgreSQL and ActiveMQ run as Docker containers
+- Managed by `docker-compose.yml`
+- Started/stopped via `swf-testbed start/stop`
+- Ideal for development and testing environments
+
+**System Mode** (System-managed infrastructure):
+- PostgreSQL and ActiveMQ run as system services (e.g., `postgresql-16.service`, `artemis.service`)
+- Managed by system service manager (systemd)
+- Testbed manages only agent processes via `swf-testbed start-local/stop-local`
+- Typical for shared development systems like pandaserver02
+
+Both modes use supervisord to manage Python agent processes. Use `python report_system_status.py` to verify service availability and determine which mode is active.
+
 ### Database Schema
 The database schema for the monitoring system is automatically maintained in the swf-monitor repository. View the current schema:
 - [testbed-schema.dbml](https://github.com/BNLNPPS/swf-monitor/blob/main/testbed-schema.dbml)

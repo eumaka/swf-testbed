@@ -73,9 +73,20 @@ cd /eic/u/wenauseic/github/swf-testbed && source .venv/bin/activate && source ~/
 - Base agent handles all infrastructure concerns automatically
 
 ### Infrastructure Components
-- **Process Management**: supervisord manages Python agents
-- **Message Broker**: ActiveMQ provides messaging backbone
-- **Database**: PostgreSQL for monitoring data
+
+**Two Deployment Modes:**
+
+**Development Mode** (Docker-managed):
+- ActiveMQ and PostgreSQL via Docker containers
+- Use `swf-testbed start/stop/status`
+
+**System Mode** (System-managed):
+- ActiveMQ and PostgreSQL as system services (e.g., artemis.service, postgresql-16.service)
+- Use `swf-testbed start-local/stop-local/status-local`
+- Use `python report_system_status.py` for comprehensive readiness check
+
+**Common Components:**
+- **Process Management**: supervisord manages Python agents (both modes)
 - **Web Interface**: Django application (swf-monitor)
 - **CLI**: Typer-based command line interface
 
