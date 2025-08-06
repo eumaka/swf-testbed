@@ -38,7 +38,10 @@ class DataAgent(ExampleAgent):
             else:
                 self.logger.info("Ignoring unknown message type", extra={"msg_type": msg_type})
         except Exception as e:
-            self.logger.error("Error processing message", extra={"error": str(e)})
+            self.logger.error(f"CRITICAL: Message processing failed - {str(e)}", extra={"error": str(e)})
+            import traceback
+            self.logger.error(f"Traceback: {traceback.format_exc()}")
+            raise RuntimeError(f"Critical message processing failure: {e}") from e
     
     # Data agent specific monitor integration methods
     def create_run_record(self, run_id, run_conditions):
@@ -46,24 +49,35 @@ class DataAgent(ExampleAgent):
         self.logger.info(f"Creating run record {run_id} in monitor...")
         
         run_data = {
-            'run_number': run_id,
+            'run_number': int(run_id),  # Convert string run_id to integer
             'start_time': datetime.now().isoformat(),
             'run_conditions': run_conditions
         }
         
-        result = self.call_monitor_api('POST', '/runs/', run_data)
-        if result:
-            monitor_run_id = result.get('run_id')
-            self.active_runs[run_id] = {
-                'monitor_run_id': monitor_run_id,
-                'files_created': 0,
-                'total_files': 0
-            }
-            self.logger.info(f"Run {run_id} registered in monitor with ID {monitor_run_id}")
-            return monitor_run_id
-        else:
-            self.logger.warning(f"Failed to register run {run_id} in monitor")
-            return None
+        try:
+            result = self.call_monitor_api('POST', '/runs/', run_data)
+            if result:
+                monitor_run_id = result.get('run_id')
+                self.active_runs[run_id] = {
+                    'monitor_run_id': monitor_run_id,
+                    'files_created': 0,
+                    'total_files': 0
+                }
+                self.logger.info(f"Run {run_id} registered in monitor with ID {monitor_run_id}")
+                return monitor_run_id
+            else:
+                self.logger.error(f"Failed to register run {run_id} in monitor - API returned no data")
+                return None
+        except RuntimeError as e:
+            if "400 Client Error" in str(e):
+                # Report the actual error details so we can see what it is
+                error_msg = str(e)
+                self.logger.error(f"Run {run_id} registration failed with 400 error: {error_msg}")
+                # Crash so we can examine the actual error and implement proper handling
+                raise
+            else:
+                # Re-raise other API errors
+                raise
     
     def update_run_status(self, run_id, status='completed'):
         """Update run status in the monitor."""
@@ -93,31 +107,47 @@ class DataAgent(ExampleAgent):
             return None
             
         monitor_run_id = self.active_runs[run_id]['monitor_run_id']
+        
+        # Skip registration if run registration failed
+        if monitor_run_id is None:
+            self.logger.warning(f"Skipping STF file registration for {filename} - run {run_id} was not registered in monitor")
+            return None
+            
         self.logger.info(f"Registering STF file {filename} in monitor...")
         
         file_data = {
             'run': monitor_run_id,
-            'file_url': f"file:///data/stf/{filename}",
+            'stf_filename': filename,
             'file_size_bytes': file_size,
             'machine_state': 'physics',
             'status': 'registered',
             'metadata': {'created_by': self.agent_name}
         }
         
-        result = self.call_monitor_api('POST', '/stf-files/', file_data)
-        if result:
-            file_id = result.get('file_id')
-            self.active_files[filename] = {
-                'file_id': file_id,
-                'run_id': run_id,
-                'status': 'registered'
-            }
-            self.active_runs[run_id]['files_created'] += 1
-            self.logger.info(f"STF file {filename} registered with ID {file_id}")
-            return file_id
-        else:
-            self.logger.warning(f"Failed to register STF file {filename}")
-            return None
+        try:
+            result = self.call_monitor_api('POST', '/stf-files/', file_data)
+            if result:
+                file_id = result.get('file_id')
+                self.active_files[filename] = {
+                    'file_id': file_id,
+                    'run_id': run_id,
+                    'status': 'registered'
+                }
+                self.active_runs[run_id]['files_created'] += 1
+                self.logger.info(f"STF file {filename} registered with ID {file_id}")
+                return file_id
+            else:
+                self.logger.warning(f"Failed to register STF file {filename} - API returned no data")
+                return None
+        except RuntimeError as e:
+            if "400 Client Error" in str(e):
+                # Parse the actual error response to understand what went wrong
+                error_msg = str(e)
+                self.logger.error(f"STF file {filename} registration failed with 400 error: {error_msg}")
+                return None
+            else:
+                # Re-raise other API errors
+                raise
     
     def update_stf_file_status(self, filename, status):
         """Update STF file status in the monitor."""
@@ -212,11 +242,11 @@ class DataAgent(ExampleAgent):
         size_bytes = message_data.get('size_bytes')
         
         self.logger.info("Processing STF file", 
-                        extra={"filename": filename, "run_id": run_id, "size_bytes": size_bytes,
+                        extra={"stf_filename": filename, "run_id": run_id, "size_bytes": size_bytes,
                               "simulation_tick": message_data.get('simulation_tick')})
         
         # Register STF file and workflow with monitor
-        self.register_stf_file(message_data)
+        self.register_stf_file(run_id, filename, size_bytes)
         
         # TODO: Register STF file with Rucio
         # TODO: Initiate transfer to E1 facilities  
@@ -239,95 +269,15 @@ class DataAgent(ExampleAgent):
         
         self.send_message('processing_agent', data_ready_message)
         
-        # Update workflow status
-        self.update_workflow_status(filename, 'data_complete', 'data')
+        # Update STF file status to processed
+        self.update_stf_file_status(filename, 'processed')
         
         self.logger.info("Sent data_ready message", 
-                        extra={"filename": filename, "run_id": run_id, "destination": "processing_agent"})
+                        extra={"stf_filename": filename, "run_id": run_id, "destination": "processing_agent"})
 
 
-    def create_run_record(self, run_id, run_conditions):
-        """Create run record in monitor API"""
-        try:
-            run_data = {
-                "run_number": int(run_id),
-                "start_time": datetime.now().isoformat(),
-                "run_conditions": run_conditions
-            }
-            
-            response = self._api_request('post', '/runs/', run_data)
-            if response:
-                self.logger.info("Created run record", extra={"run_id": run_id})
-            else:
-                self.logger.warning("Failed to create run record", extra={"run_id": run_id})
-        except Exception as e:
-            self.logger.error("Error creating run record", extra={"run_id": run_id, "error": str(e)})
     
-    def register_stf_file(self, message_data):
-        """Register STF file and create workflow record"""
-        filename = message_data.get('filename')
-        run_id = message_data.get('run_id')
-        file_url = message_data.get('file_url')
-        checksum = message_data.get('checksum')
-        size_bytes = message_data.get('size_bytes')
-        
-        try:
-            # First, register the STF file
-            stf_data = {
-                "run": int(run_id),
-                "machine_state": message_data.get('substate', 'physics'),
-                "file_url": file_url,
-                "file_size_bytes": size_bytes,
-                "checksum": checksum,
-                "status": "registered",
-                "metadata": {
-                    "simulation_tick": message_data.get('simulation_tick'),
-                    "comment": message_data.get('comment', ''),
-                    "start": message_data.get('start'),
-                    "end": message_data.get('end')
-                }
-            }
-            
-            stf_response = self._api_request('post', '/stf-files/', stf_data)
-            
-            if stf_response:
-                self.logger.info("Registered STF file", extra={"filename": filename, "run_id": run_id})
-                
-                # Create workflow record
-                workflow_data = {
-                    "filename": filename,
-                    "daq_state": message_data.get('state', 'run'),
-                    "daq_substate": message_data.get('substate', 'physics'),
-                    "generated_time": datetime.now().isoformat(),
-                    "stf_start_time": self._parse_time_string(message_data.get('start')),
-                    "stf_end_time": self._parse_time_string(message_data.get('end')),
-                    "current_status": "data_received",
-                    "current_agent": "data",
-                    "stf_metadata": message_data
-                }
-                
-                workflow_response = self._api_request('post', '/workflows/', workflow_data)
-                
-                if workflow_response:
-                    self.logger.info("Created STF workflow", extra={"filename": filename})
-                else:
-                    self.logger.warning("Failed to create STF workflow", extra={"filename": filename})
-            else:
-                self.logger.warning("Failed to register STF file", extra={"filename": filename})
-                
-        except Exception as e:
-            self.logger.error("Error registering STF file", extra={"filename": filename, "error": str(e)})
     
-    def update_workflow_status(self, filename, status, agent_type):
-        """Update workflow status after processing"""
-        try:
-            # This would typically require getting the workflow ID first
-            # For now, we'll log the status change
-            self.logger.info("Workflow status updated", 
-                           extra={"filename": filename, "status": status, "agent": agent_type})
-        except Exception as e:
-            self.logger.error("Error updating workflow status", 
-                            extra={"filename": filename, "error": str(e)})
     
     def _parse_time_string(self, time_str):
         """Parse time string from DAQ simulator format to ISO format"""
@@ -337,8 +287,9 @@ class DataAgent(ExampleAgent):
             # Convert from format like '20250801143000' to ISO format
             dt = datetime.strptime(time_str, '%Y%m%d%H%M%S')
             return dt.isoformat()
-        except:
-            return datetime.now().isoformat()
+        except ValueError as e:
+            self.logger.error(f"Failed to parse time string '{time_str}': {e}")
+            raise RuntimeError(f"Critical time parsing failure: {e}") from e
 
 
 if __name__ == "__main__":

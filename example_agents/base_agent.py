@@ -72,10 +72,6 @@ stomp_logger = logging.getLogger('stomp')
 stomp_logger.setLevel(logging.DEBUG)
 stomp_logger.addHandler(console_handler)
 
-# Root logger
-root_logger = logging.getLogger()
-root_logger.addHandler(console_handler)
-
 
 class ExampleAgent(stomp.ConnectionListener):
     """
@@ -161,20 +157,26 @@ class ExampleAgent(stomp.ConnectionListener):
         self.mq_connected = False
         
         try:
-            logging.debug("Attempting STOMP connection with version 1.2...")
-            # Use STOMP version 1.2 with client-id as per working example
+            logging.debug("Attempting STOMP connection with version 1.1...")
+            # Use STOMP version 1.1 with client-id and longer heartbeat for development
             self.conn.connect(
                 self.mq_user, 
                 self.mq_password, 
                 wait=True, 
-                version='1.2',
-                headers={'client-id': self.agent_name}
+                version='1.1',
+                headers={
+                    'client-id': self.agent_name,
+                    'heart-beat': '30000,3600000'  # Send heartbeat every 30sec, timeout after 1hr
+                }
             )
             self.mq_connected = True
             logging.info("Successfully connected to ActiveMQ")
             
             self.conn.subscribe(destination=self.subscription_queue, id=1, ack='auto')
             logging.info(f"Subscribed to queue: '{self.subscription_queue}'")
+            
+            # Register as subscriber in monitor
+            self.register_subscriber()
             
             # Initial registration/heartbeat
             self.send_heartbeat()
@@ -237,6 +239,7 @@ class ExampleAgent(stomp.ConnectionListener):
     def _api_request(self, method, endpoint, json_data=None):
         """
         Helper method to make a request to the monitor API.
+        FAILS FAST - raises exception on any API error.
         """
         url = f"{self.monitor_url}/api{endpoint}"
         try:
@@ -244,8 +247,11 @@ class ExampleAgent(stomp.ConnectionListener):
             response.raise_for_status()  # Raise an exception for bad status codes
             return response.json()
         except requests.exceptions.RequestException as e:
-            logging.error(f"API request failed: {method.upper()} {url} - {e}")
-            return None
+            logging.error(f"API request FAILED - TERMINATING: {method.upper()} {url} - {e}")
+            if hasattr(e, 'response') and e.response is not None:
+                logging.error(f"Response status: {e.response.status_code}")
+                logging.error(f"Response body: {e.response.text}")
+            raise RuntimeError(f"Critical API failure - agent cannot continue: {method.upper()} {url} - {e}") from e
 
     def send_heartbeat(self):
         """Registers the agent and sends a heartbeat to the monitor."""
@@ -353,4 +359,28 @@ class ExampleAgent(stomp.ConnectionListener):
     def call_monitor_api(self, method, endpoint, json_data=None):
         """Generic monitor API call method for agent-specific implementations."""
         return self._api_request(method.lower(), endpoint, json_data)
+    
+    def register_subscriber(self):
+        """Register this agent as a subscriber to its ActiveMQ queue."""
+        logging.info(f"Registering subscriber for queue '{self.subscription_queue}'...")
+        
+        subscriber_data = {
+            "subscriber_name": f"{self.agent_name}-{self.subscription_queue}",
+            "description": f"{self.agent_type} agent subscribing to {self.subscription_queue}",
+            "is_active": True,
+            "fraction": 1.0  # Receives all messages
+        }
+        
+        try:
+            result = self._api_request('post', '/subscribers/', subscriber_data)
+            if result:
+                logging.info(f"Subscriber registered successfully: {result.get('subscriber_name')}")
+                return True
+            else:
+                logging.warning("Failed to register subscriber")
+                return False
+        except Exception as e:
+            # Don't fail startup if subscriber registration fails
+            logging.warning(f"Subscriber registration failed (non-critical): {e}")
+            return False
 

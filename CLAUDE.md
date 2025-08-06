@@ -85,13 +85,22 @@ Before implementing ANY solution, Claude must explain:
   - **EXAMPLE AGENTS NEED THE SAME PATTERN** - they should auto-load venv and ~/.env
 
 ### Testbed Management
-- `swf-testbed init` - Initialize environment (creates logs/ directory and supervisord.conf)
-- `swf-testbed start` - Start testbed with Docker services (PostgreSQL, ActiveMQ) + agents
-- `swf-testbed stop` - Stop all Docker services and agents
+
+**TWO DEPLOYMENT MODES:**
+
+**Development Mode** (Docker-managed infrastructure):
+- `swf-testbed start` - Start Docker services (PostgreSQL, ActiveMQ) + agents
+- `swf-testbed stop` - Stop all Docker services and agents  
 - `swf-testbed status` - Check status of Docker services and agents
-- `swf-testbed start-local` - Start agents only (assumes PostgreSQL/ActiveMQ running locally)
-- `swf-testbed stop-local` - Stop local agents only
-- `swf-testbed status-local` - Check status of local services and agents
+
+**System Mode** (System-managed infrastructure):
+- `swf-testbed start-local` - Start agents only (assumes system PostgreSQL/ActiveMQ services)
+- `swf-testbed stop-local` - Stop agents only
+- `swf-testbed status-local` - Check status of system services and agents
+- `python report_system_status.py` - **RECOMMENDED**: Comprehensive system readiness check
+
+**Common Commands:**
+- `swf-testbed init` - Initialize environment (creates logs/ directory and supervisord.conf)
 
 ### Installation and Dependencies
 **🚨 CRITICAL: ALWAYS ACTIVATE VIRTUAL ENVIRONMENT FIRST 🚨**
@@ -138,16 +147,24 @@ The system implements loosely coupled agents that communicate via ActiveMQ messa
 - Process management configuration in `supervisord.conf`
 
 ### Infrastructure Components
-- **Process Management**: supervisord manages all Python agent processes
-- **Message Broker**: ActiveMQ provides messaging backbone
-- **Database**: PostgreSQL for monitoring data and metadata
+
+**Core Services (Two deployment modes):**
+- **Message Broker**: ActiveMQ (Docker container OR system service like artemis.service)
+- **Database**: PostgreSQL (Docker container OR system service like postgresql-16.service)
 - **Web Interface**: Django application (swf-monitor) for system monitoring
+
+**Testbed-Managed Components:**
+- **Process Management**: supervisord manages Python agent processes
 - **CLI**: Typer-based command line interface for testbed management
+- **Agent Orchestration**: Coordinates agent lifecycle regardless of infrastructure mode
 
 ### Environment Setup
 - `SWF_HOME` environment variable automatically set to parent directory containing all swf-* repos
-- Docker Compose provides PostgreSQL and ActiveMQ services for development
-- Local installation supported for users who prefer host-managed services
+
+**Development Mode**: Docker Compose provides PostgreSQL and ActiveMQ services
+**System Mode**: System-managed PostgreSQL/ActiveMQ services (e.g., on pandaserver02)
+
+Use `python report_system_status.py` to verify which mode is active and check service readiness.
 
 ## Development Practices
 

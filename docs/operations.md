@@ -4,11 +4,14 @@ Running and managing the SWF Testbed services.
 
 ## Running the Testbed
 
-You can run the testbed in two modes: using Docker for managing background
-services (PostgreSQL and ActiveMQ), or by running these services locally on
-your host machine.
+The testbed supports two deployment modes:
 
-### Using Docker (Recommended)
+**Development Mode**: Docker manages PostgreSQL and ActiveMQ
+**System Mode**: System services manage PostgreSQL and ActiveMQ (e.g., pandaserver02)
+
+Use `python report_system_status.py` to check which services are available and determine the appropriate mode.
+
+### Development Mode (Docker-managed)
 
 This is the recommended approach as it provides a consistent, cross-platform
 environment.
@@ -29,10 +32,9 @@ the Docker containers and the Python agents managed by Supervisor.
 - `swf-testbed status`: Shows the status of the Docker containers and the
   Python agents.
 
-### Running Locally (Without Docker)
+### System Mode (System-managed services)
 
-This mode is for users who prefer to manage the background services directly on
-their host machine.
+This mode is for environments where PostgreSQL and ActiveMQ are managed as system services.
 
 **Prerequisites:**
 
@@ -69,10 +71,11 @@ The `swf-testbed` CLI also provides commands for managing the testbed services
 when they are running locally.
 
 - `swf-testbed start-local`: Starts the Python agents using Supervisor. It
-  assumes PostgreSQL and ActiveMQ are already running.
+  assumes PostgreSQL and ActiveMQ are already running as system services.
 - `swf-testbed stop-local`: Stops the Python agents managed by Supervisor.
-- `swf-testbed status-local`: Checks the status of local services (PostgreSQL,
+- `swf-testbed status-local`: Checks the status of system services (PostgreSQL,
   ActiveMQ) and the Python agents managed by Supervisor.
+- `python report_system_status.py`: **RECOMMENDED** - Comprehensive system readiness check
 
 ### Agent Process Management
 
@@ -115,11 +118,11 @@ export ACTIVEMQ_USER=admin
 export ACTIVEMQ_PASSWORD=admin
 ```
 
-#### Production Broker
+#### System Mode Broker
 
-In a production environment, the agents should be configured to use the centrally
-provided ActiveMQ service. This is done by setting the same environment variables
- to point to the production broker's host, port, and credentials.
+In system mode environments, the agents should be configured to use the system-managed
+ActiveMQ service. This is done by setting the same environment variables
+ to point to the system broker's host, port, and credentials.
 
 Each agent (e.g., `swf-monitor`, `swf-data-agent`) will need to be configured
 to read these environment variables and use them to connect to the broker. The

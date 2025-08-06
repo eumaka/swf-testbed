@@ -1,59 +1,62 @@
 # Next Steps - Streaming Workflow Testbed
 
-## Current Status (v14 - Documentation Refactoring Complete)
+## Recent Developments
 
-### 🎉 **Major Achievements Completed (v10-v14):**
-1. **Complete MCP Implementation** - WebSocket service fully functional with authentication
-2. **REST MCP API** - Full HTTP alternative to WebSocket with shared service architecture
-3. **Test Suite Refactoring** - 977-line monolithic test split into 11 focused modules
-4. **Documentation Organization** - Comprehensive docs/ structure, streamlined README
-5. **GitHub Actions Integration** - Automatic database schema diagram generation
-6. **Logging Infrastructure** - Production-ready with swf-common-lib integration
-7. **Working Detailed Example Workflow** - Functional agents with complete data flow simulation
-8. **Monitor HTTPS/HTTP Dual Server** - Separate protocols for authenticated APIs vs REST logging
-9. **Agent Architecture Cleanup** - Base agent handles all infrastructure, clean business logic
-10. **Documentation Modularization** - 815-line monolithic README split into focused modules
-11. **AI Assistant Integration** - Critical thinking requirements and structured guidance
+**Live Workflow Monitoring Operational**: Monitor now records and displays real testbed activity - STF files, runs, and agent activity are being tracked end-to-end from DAQ simulator through agents to web interface.
 
-### ✅ **Infrastructure Foundation Complete:**
-- **MCP Protocol** - Both WebSocket and REST implementations working
-- **Database Schema** - Auto-generating diagrams, comprehensive models
-- **Authentication** - Token-based API, Django sessions, testuser automation
-- **Testing** - 65 tests across API, UI, WebSocket, and integration scenarios
-- **Documentation** - Setup guides, API reference, development roadmap
-- **ActiveMQ Integration** - SSL connectivity, message queue management
+## IMMEDIATE PRIORITY: DataTables Server-Side Pattern
 
-### 🔧 **Current Development Status:**
-- All repositories on coordinated `infra/baseline-v14` branches
-- STF file registration workflow fully operational
-- Documentation modularized for AI assistant readability
-- Monitor serving dual HTTP/HTTPS protocols
+### Goal
+Create consistent, performant list views across all monitor pages using DataTables server-side processing with AJAX.
 
-### 📋 **Next Development Phase (Priority Order):**
+### Phase 1: Establish Pattern (Logs as Exemplar)
 
-#### Immediate (Testing & Validation)
-1. **Test Dual Server Configuration** - Verify HTTP/HTTPS Django servers work correctly with agent API calls
-2. **Validate STF File Registration** - Confirm agents successfully populate monitor database via new API endpoints
-3. **Monitor Data Verification** - Check that schema models are receiving and displaying workflow data properly
+1. **Base Template Creation**
+   - Create `_datatable_base.html` template with standard DataTables server-side setup
+   - Include standard AJAX configuration, pagination, search, sorting
+   - URL parameter handling for bookmarkable states
 
-#### High Priority (Monitor Functionality)  
-4. **Monitor View Development** - Create comprehensive views for all schema models (STF files, workflows, runs, agents)
-5. **Dashboard Enhancement** - Build functional monitoring interface showing real-time testbed status
-6. **API Endpoint Completion** - Implement remaining monitor API endpoints for full agent integration
+2. **AJAX Endpoint Pattern**
+   - Create `logs_datatable_ajax()` view as reference implementation
+   - Standard parameter handling: draw, start, length, search, ordering
+   - Consistent response format for all DataTables endpoints
 
-#### Medium Priority (Integration & Enhancement)
-7. **Agent MCP Integration** - Add MCP capabilities to existing testbed agents
-8. **End-to-End Testing** - Comprehensive workflow testing across all components
-9. **Monitor Apache Integration** - Deploy monitor into pandaserver02 Apache service
+3. **JavaScript Reusables**
+   - Common DataTables configuration object
+   - Standard column formatters (timestamps, status badges, actions)
+   - URL state management utilities
 
-## Technical Foundation Status
+4. **Logs Implementation**
+   - Convert existing logs page to use new pattern
+   - Maintain all current filtering (app_name, instance_name, time range)
+   - Ensure proper URL parameter integration
 
-### ✅ **Functional Infrastructure:**
-- **Django/Daphne ASGI** - WebSocket and REST services fully operational
-- **Database** - Auto-generating schema diagrams, comprehensive models
-- **MCP Protocol** - Complete WebSocket and REST implementation
-- **Authentication** - Token-based API, Django sessions, automated testing
-- **Testing** - 65 tests in organized modules, comprehensive coverage
-- **Documentation** - Structured guides, API reference, setup instructions
-- **ActiveMQ** - SSL connectivity, message queue integration
-- **Proxy Handling** - BNL environment compatibility confirmed
+### Phase 2: Pattern Documentation
+- Document the server-side DataTables pattern
+- Create implementation guide for other list views
+- Code examples and best practices
+
+### Phase 3: Gradual Migration
+- Apply pattern to STF Files list
+- Apply pattern to Runs list
+- Apply pattern to Subscribers list
+- Apply pattern to other list views
+
+### Benefits
+- **Consistent UX** across all monitor pages
+- **Performance**: Only load data actually being viewed
+- **URL Addressability**: All table states in URL for bookmarking/sharing
+- **Maintainability**: Shared templates and JavaScript
+- **Scalability**: Handles large datasets efficiently
+
+## Success Metrics
+- All list views use same DataTables pattern
+- Sub-second response times for paginated data
+- Bookmarkable URLs, fast navigation
+- Shared code reduces duplication by 80%
+
+## Agent Detail Page Investigation
+- Current "associated workflows" shows STF workflow files, not actual runs
+- Need to determine if Run model tracks which agent initiated it
+- Consider replacing with "initiated runs" showing runs the agent has started
+- Check MessageQueueDispatch or other models for agent-run correlation
