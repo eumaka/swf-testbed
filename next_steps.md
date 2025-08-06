@@ -53,4 +53,10 @@ Create consistent, performant list views across all monitor pages using DataTabl
 - All list views use same DataTables pattern
 - Sub-second response times for paginated data
 - Bookmarkable URLs, fast navigation
-- Shared code reduces duplication by 80%wYw
+- Shared code reduces duplication by 80%
+
+## Agent Detail Page Investigation
+- Current "associated workflows" shows STF workflow files, not actual runs
+- Need to determine if Run model tracks which agent initiated it
+- Consider replacing with "initiated runs" showing runs the agent has started
+- Check MessageQueueDispatch or other models for agent-run correlation

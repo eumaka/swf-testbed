@@ -64,6 +64,10 @@ class DAQSimulator:
         self.file_counter = 0  # Serial counter for unique filenames across all runs
         self.current_run_id = None
         
+        # Agent identity
+        self.agent_name = 'daq-simulator'
+        self.agent_type = 'daqsim'
+        
         # Monitor API configuration
         self.monitor_url = os.getenv('SWF_MONITOR_URL', 'https://localhost:8443')
         self.api_token = os.getenv('SWF_API_TOKEN')
@@ -92,6 +96,9 @@ class DAQSimulator:
         
         # Setup ActiveMQ connection
         self.setup_activemq()
+        
+        # Send initial registration/heartbeat
+        self.send_heartbeat()
     
     def get_next_run_number(self):
         """Get the next run number from persistent state API."""
@@ -169,10 +176,44 @@ class DAQSimulator:
             self.logger.debug(f"Sent {message_body.get('msg_type')} message to '{destination}'")
         except Exception as e:
             self.logger.error(f"Failed to send message to '{destination}': {e}")
+    
+    def send_heartbeat(self):
+        """Register/update this agent in the monitor system."""
+        try:
+            # Determine status based on ActiveMQ connection
+            mq_connected = hasattr(self, 'conn') and self.conn and self.conn.is_connected()
+            status = "OK" if mq_connected else "WARNING"
+            
+            payload = {
+                "instance_name": self.agent_name,
+                "agent_type": self.agent_type,
+                "status": status,
+                "description": f"DAQ Simulator - SimPy-based ePIC DAQ state machine. MQ: {'connected' if mq_connected else 'disconnected'}",
+                "workflow_enabled": True  # Enable this agent for workflow tracking
+            }
+            
+            print(f"[HEARTBEAT] Sending heartbeat for {self.agent_name} to {self.monitor_url}/api/systemagents/heartbeat/")
+            print(f"[HEARTBEAT] Payload: {payload}")
+            
+            url = f"{self.monitor_url}/api/systemagents/heartbeat/"
+            response = self.api_session.post(url, json=payload, timeout=10)
+            response.raise_for_status()
+            
+            print(f"[HEARTBEAT] SUCCESS: Status {response.status_code}")
+            self.logger.info(f"Heartbeat sent successfully. Status: {status}")
+            
+        except Exception as e:
+            print(f"[HEARTBEAT] FAILED: {e}")
+            self.logger.warning(f"Failed to send heartbeat: {e}")
+            import traceback
+            print(f"[HEARTBEAT] Traceback: {traceback.format_exc()}")
         
     def run_daq_cycle(self):
         """Complete DAQ cycle following state transitions"""
         self.logger.info("Starting DAQ cycle", extra={"simulation_tick": self.env.now})
+        
+        # Send heartbeat at start of cycle
+        self.send_heartbeat()
         
         # State 1: no_beam / not_ready (5 seconds - fast test)
         self.logger.info("DAQ State -> no_beam/not_ready (Collider not operating)", 
@@ -349,10 +390,16 @@ class DAQSimulator:
                         extra={"simulation_tick": self.env.now, "duration_minutes": duration_seconds/60})
         
         start_time = self.env.now
+        heartbeat_counter = 0
         
         while (self.env.now - start_time) < duration_seconds:
             # Generate STF
             yield self.env.process(self.generate_single_stf())
+            
+            # Send heartbeat every 10 STFs
+            heartbeat_counter += 1
+            if heartbeat_counter % 10 == 0:
+                self.send_heartbeat()
             
             # Wait for next STF interval
             yield self.env.timeout(self.stf_interval)
