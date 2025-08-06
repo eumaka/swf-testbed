@@ -40,7 +40,10 @@ class ProcessingAgent(ExampleAgent):
             else:
                 self.logger.info("Ignoring unknown message type", extra={"msg_type": msg_type})
         except Exception as e:
-            self.logger.error("Error processing message", extra={"error": str(e)})
+            self.logger.error(f"CRITICAL: Message processing failed - {str(e)}", extra={"error": str(e)})
+            import traceback
+            self.logger.error(f"Traceback: {traceback.format_exc()}")
+            raise RuntimeError(f"Critical message processing failure: {e}") from e
     
     # Processing agent specific monitor integration methods
     def update_file_processing_status(self, filename, status, monitor_file_id=None):
@@ -200,26 +203,12 @@ class ProcessingAgent(ExampleAgent):
         checksum = message_data.get('checksum')
         size_bytes = message_data.get('size_bytes')
         processed_by = message_data.get('processed_by')
-        monitor_file_id = message_data.get('monitor_file_id')
         
         self.logger.info("Processing STF data", 
-                        extra={"filename": filename, "run_id": run_id, "size_bytes": size_bytes,
-                              "processed_by": processed_by, "simulation_tick": message_data.get('simulation_tick'),
-                              "monitor_file_id": monitor_file_id})
+                        extra={"stf_filename": filename, "run_id": run_id, "size_bytes": size_bytes,
+                              "processed_by": processed_by, "simulation_tick": message_data.get('simulation_tick')})
         
-        # Register processing task with monitor
-        task_id = self.register_processing_task(filename, message_data)
-        
-        # Update file status to processing
-        if monitor_file_id:
-            self.update_file_processing_status(filename, 'processing', monitor_file_id)
-        
-        # TODO: Download STF file from file_url
-        # TODO: Run reconstruction/analysis algorithms 
-        # TODO: Create output files (DST, histograms, etc.)
-        # TODO: Register output files with Rucio
-        
-        # Simulate processing time (longer than data agent)
+        # Simulate processing time 
         import time
         time.sleep(0.5)  # Simulate compute-intensive processing
         
@@ -229,16 +218,8 @@ class ProcessingAgent(ExampleAgent):
             f"{filename.replace('.dat', '.hist.root')}"
         ]
         
-        # Complete processing task in monitor
-        if task_id:
-            self.complete_processing_task(filename, output_files)
-        
-        # Update file status to processed
-        if monitor_file_id:
-            self.update_file_processing_status(filename, 'processed', monitor_file_id)
-        
-        # Update workflow status (legacy method - keep for compatibility)
-        self.update_workflow_status(filename, 'processing_complete', 'processing')
+        # Update processing stats
+        self.processing_stats['total_processed'] += 1
         
         # Send processing_complete message
         processing_complete_message = {
@@ -251,9 +232,7 @@ class ProcessingAgent(ExampleAgent):
             "output_files": output_files,
             "processing_time_ms": 500,
             "simulation_tick": message_data.get('simulation_tick'),
-            "processed_by": self.agent_name,
-            "monitor_file_id": monitor_file_id,
-            "monitor_task_id": task_id
+            "processed_by": self.agent_name
         }
         
         # Register processing results with monitor (legacy method - keep for compatibility)
@@ -262,8 +241,7 @@ class ProcessingAgent(ExampleAgent):
         # Send to monitoring/analysis agents
         self.send_message('monitoring_agent', processing_complete_message)
         self.logger.info("Sent processing_complete message", 
-                        extra={"filename": filename, "run_id": run_id, "destination": "monitoring_agent", 
-                              "monitor_file_id": monitor_file_id, "monitor_task_id": task_id})
+                        extra={"stf_filename": filename, "run_id": run_id, "destination": "monitoring_agent"})
 
 
     
@@ -276,12 +254,12 @@ class ProcessingAgent(ExampleAgent):
             # This is now handled by the new processing agent specific methods above
             # Keeping this method for backward compatibility and logging
             self.logger.info("Processing results registered via new processing agent specific methods", 
-                           extra={"filename": filename, "run_id": run_id, 
+                           extra={"stf_filename": filename, "run_id": run_id, 
                                  "output_files": len(processing_data.get('output_files', []))})
             
         except Exception as e:
             self.logger.error("Error in legacy processing results registration", 
-                            extra={"filename": filename, "error": str(e)})
+                            extra={"stf_filename": filename, "error": str(e)})
 
 
 if __name__ == "__main__":

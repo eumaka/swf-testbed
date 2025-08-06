@@ -166,7 +166,7 @@ class ExampleAgent(stomp.ConnectionListener):
                 version='1.1',
                 headers={
                     'client-id': self.agent_name,
-                    'heart-beat': '30000,3600000'  # Send heartbeat every 30sec, timeout after 1hr
+                    'heart-beat': '10000,30000'  # Send heartbeat every 10sec, expect server timeout after 30sec
                 }
             )
             self.mq_connected = True
@@ -184,6 +184,11 @@ class ExampleAgent(stomp.ConnectionListener):
             logging.info(f"{self.agent_name} is running. Press Ctrl+C to stop.")
             while True:
                 time.sleep(60) # Keep the main thread alive, heartbeats can be added here
+                
+                # Check connection status and attempt reconnection if needed
+                if not self.mq_connected:
+                    self._attempt_reconnect()
+                    
                 self.send_heartbeat()
 
         except KeyboardInterrupt:
@@ -214,10 +219,41 @@ class ExampleAgent(stomp.ConnectionListener):
     
     def on_disconnected(self):
         """Handle disconnection from ActiveMQ."""
-        logging.warning("Disconnected from ActiveMQ")
+        logging.warning("Disconnected from ActiveMQ - will attempt reconnection")
         self.mq_connected = False
         # Send heartbeat to update status
         self.send_heartbeat()
+
+    def _attempt_reconnect(self):
+        """Attempt to reconnect to ActiveMQ."""
+        if self.mq_connected:
+            return True
+            
+        try:
+            logging.info("Attempting to reconnect to ActiveMQ...")
+            if self.conn.is_connected():
+                self.conn.disconnect()
+            
+            self.conn.connect(
+                self.mq_user,
+                self.mq_password,
+                wait=True,
+                version='1.1',
+                headers={
+                    'client-id': self.agent_name,
+                    'heart-beat': '10000,30000'  # Send heartbeat every 10sec, expect server timeout after 30sec
+                }
+            )
+            
+            self.conn.subscribe(destination=self.subscription_queue, id=1, ack='auto')
+            self.mq_connected = True
+            logging.info("Successfully reconnected to ActiveMQ")
+            return True
+            
+        except Exception as e:
+            logging.warning(f"Reconnection attempt failed: {e}")
+            self.mq_connected = False
+            return False
 
     def on_message(self, frame):
         """
@@ -235,6 +271,20 @@ class ExampleAgent(stomp.ConnectionListener):
             logging.info(f"Sent message to '{destination}': {message_body}")
         except Exception as e:
             logging.error(f"Failed to send message to '{destination}': {e}")
+            
+            # Check for SSL/connection errors that indicate disconnection
+            if any(error_type in str(e).lower() for error_type in ['ssl', 'eof', 'connection', 'broken pipe']):
+                logging.warning("Connection error detected - attempting recovery")
+                self.mq_connected = False
+                time.sleep(1)  # Brief pause before retry
+                if self._attempt_reconnect():
+                    try:
+                        self.conn.send(body=json.dumps(message_body), destination=destination)
+                        logging.info(f"Message sent successfully after reconnection to '{destination}'")
+                    except Exception as retry_e:
+                        logging.error(f"Retry failed after reconnection: {retry_e}")
+                else:
+                    logging.error("Reconnection failed - message lost")
 
     def _api_request(self, method, endpoint, json_data=None):
         """
@@ -247,6 +297,14 @@ class ExampleAgent(stomp.ConnectionListener):
             response.raise_for_status()  # Raise an exception for bad status codes
             return response.json()
         except requests.exceptions.RequestException as e:
+            # Check for "already exists" error in subscriber registration
+            if hasattr(e, 'response') and e.response is not None and e.response.status_code == 400:
+                response_text = e.response.text.lower()
+                if "already exists" in response_text and "subscriber" in response_text:
+                    # This is a normal "already exists" case for subscriber registration
+                    logging.info(f"Resource already exists (normal): {method.upper()} {url}")
+                    return {"status": "already_exists"}
+            
             logging.error(f"API request FAILED - TERMINATING: {method.upper()} {url} - {e}")
             if hasattr(e, 'response') and e.response is not None:
                 logging.error(f"Response status: {e.response.status_code}")
@@ -374,13 +432,17 @@ class ExampleAgent(stomp.ConnectionListener):
         try:
             result = self._api_request('post', '/subscribers/', subscriber_data)
             if result:
-                logging.info(f"Subscriber registered successfully: {result.get('subscriber_name')}")
-                return True
+                if result.get('status') == 'already_exists':
+                    logging.info(f"Subscriber already registered: {subscriber_data['subscriber_name']}")
+                    return True
+                else:
+                    logging.info(f"Subscriber registered successfully: {result.get('subscriber_name')}")
+                    return True
             else:
-                logging.warning("Failed to register subscriber")
+                logging.error("Failed to register subscriber")
                 return False
         except Exception as e:
-            # Don't fail startup if subscriber registration fails
-            logging.warning(f"Subscriber registration failed (non-critical): {e}")
-            return False
+            # Other registration failures are critical
+            logging.error(f"Critical subscriber registration failure: {e}")
+            raise e
 
