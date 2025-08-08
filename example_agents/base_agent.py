@@ -305,7 +305,7 @@ class ExampleAgent(stomp.ConnectionListener):
                     logging.info(f"Resource already exists (normal): {method.upper()} {url}")
                     return {"status": "already_exists"}
             
-            logging.error(f"API request FAILED - TERMINATING: {method.upper()} {url} - {e}")
+            logging.error(f"API request failed; terminating agent: {method.upper()} {url} - {e}")
             if hasattr(e, 'response') and e.response is not None:
                 logging.error(f"Response status: {e.response.status_code}")
                 logging.error(f"Response body: {e.response.text}")
