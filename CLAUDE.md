@@ -25,7 +25,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ### Environment Setup Rule
 **DO NOT RUN PYTHON COMMANDS WITHOUT VENV:** Every Python command must be preceded by:
 ```bash
-cd /eic/u/wenauseic/github/swf-testbed && source .venv/bin/activate && source ~/.env
+cd /eic/u/wenauseic/github/swf-testbed && source ~/.env
 ```
 **This includes:** python, pip, pytest, any example_agents scripts, or swf-testbed commands
 

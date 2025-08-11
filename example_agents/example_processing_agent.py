@@ -2,7 +2,7 @@
 Example Processing Agent: Handles data ready messages.
 """
 
-from base_agent import ExampleAgent
+from swf_common_lib.base_agent import ExampleAgent
 import json
 import time
 from datetime import datetime
