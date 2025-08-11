@@ -1,5 +1,9 @@
 # CLAUDE.md
 
+# Introduction - Bootstrap summary
+
+We are working on a streaming workflow testbed project for which stf-testbed is the top umbrella repository, stf-common-lib is common software and infrastructure, stf-monitor is the system-wide monitor/REST service and MCP (Model Context Protocol) service, and the other stf-* repositories are agents performing parts of the workflows. We work mainly on the core repos testbed, common-lib and monitor. The testbed repo includes examples in agent_examples/ of the DAQ simulator that drives workflows, and the data and processing agents. They are what we presently use to run the system. The system is running on the computer we are working on, a headless server and we are using system-level ActiveMQ and PostgreSQL. Study the AI guidance, adhere to the MANDATORY critical thinking requirements, and review README.md and references therein to familiarize yourself. When writing code, never create from scratch what can be accomplished using the common code in common-lib and the existing code base throughout the core repos. Hence you must be familiar with this full code base. You must be highly professional in your work, applying the highest level of analysis and critical thinking to your tasks in this complex project. You must always do what is asked of you, first. If you wish you may then propose further actions. NEVER undertake actions that have not been asked for and approved. This complex multi-repository project employing many tools and services in performing complex, closely monitored workflows demands of you the highest level of professionalism and deep critical thinking. Our dialogue should be concise and professional, free of hype and ingratiating comments, free of guesses presented as facts. Declarations should be verifiable and verified facts. Do not undertake time consuming actions or sequences of actions without regularly checking in.
+
 # 🚨 MANDATORY CHECKLIST - READ FIRST - NO EXCEPTIONS 🚨
 
 **BEFORE RUNNING ANY PYTHON COMMANDS:**
@@ -21,7 +25,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ### Environment Setup Rule
 **DO NOT RUN PYTHON COMMANDS WITHOUT VENV:** Every Python command must be preceded by:
 ```bash
-cd /eic/u/wenauseic/github/swf-testbed && source .venv/bin/activate && source ~/.env
+cd /eic/u/wenauseic/github/swf-testbed && source ~/.env
 ```
 **This includes:** python, pip, pytest, any example_agents scripts, or swf-testbed commands
 

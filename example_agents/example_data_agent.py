@@ -2,7 +2,7 @@
 Example Data Agent: Handles STF generation messages.
 """
 
-from base_agent import ExampleAgent
+from swf_common_lib.base_agent import ExampleAgent
 import json
 import requests
 from datetime import datetime

@@ -2,7 +2,7 @@
 Example DAQ Simulator Agent: Originates the workflow.
 """
 
-from base_agent import ExampleAgent
+from swf_common_lib.base_agent import ExampleAgent
 import json
 import time
 import uuid

@@ -506,7 +506,7 @@ def run_simulation(duration_hours=1.0, num_cycles=1):
                 data = json.load(f)
                 msg_type = data.get("msg_type", "unknown")
                 event_types[msg_type] = event_types.get(msg_type, 0) + 1
-        except (json.JSONDecodeError, IOError, KeyError) as e:
+        except (json.JSONDecodeError, OSError, KeyError) as e:
             main_logger.error(f"Failed to process event file {event_file}: {e}")
             # Don't crash here since this is just summary reporting
     
