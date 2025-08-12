@@ -2,12 +2,12 @@
 Example Processing Agent: Handles data ready messages.
 """
 
-from swf_common_lib.base_agent import ExampleAgent
+from swf_common_lib.base_agent import BaseAgent
 import json
 import time
 from datetime import datetime
 
-class ProcessingAgent(ExampleAgent):
+class ProcessingAgent(BaseAgent):
     """
     An example agent that simulates the role of the Processing Agent.
     It listens for 'data_ready' messages.
