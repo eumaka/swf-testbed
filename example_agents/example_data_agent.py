@@ -2,12 +2,12 @@
 Example Data Agent: Handles STF generation messages.
 """
 
-from swf_common_lib.base_agent import ExampleAgent
+from swf_common_lib.base_agent import BaseAgent
 import json
 import requests
 from datetime import datetime
 
-class DataAgent(ExampleAgent):
+class DataAgent(BaseAgent):
     """
     An example agent that simulates the role of the Data Agent.
     It listens for 'stf_gen' messages and sends 'data_ready' messages.

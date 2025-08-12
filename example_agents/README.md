@@ -8,7 +8,7 @@ service (via its REST API) and the ActiveMQ message broker. They are designed
 to be easy to run and understand, providing a clear blueprint for developing
 new, production-grade agents.
 
-The key design is in `base_agent.py`, which provides an `ExampleAgent` class
+The key design is in `base_agent.py`, which provides a `BaseAgent` class
 that handles all common infrastructure. The specialized agents
 (`example_data_agent.py`, `example_processing_agent.py`) inherit from this
 base class and contain only the logic specific to their role.

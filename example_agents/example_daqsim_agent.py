@@ -2,13 +2,13 @@
 Example DAQ Simulator Agent: Originates the workflow.
 """
 
-from swf_common_lib.base_agent import ExampleAgent
+from swf_common_lib.base_agent import BaseAgent
 import json
 import time
 import uuid
 from datetime import datetime
 
-class DaqSimAgent(ExampleAgent):
+class DaqSimAgent(BaseAgent):
     """
     An example agent that simulates the DAQ system.
     It periodically generates 'stf_gen' messages to trigger the workflow,

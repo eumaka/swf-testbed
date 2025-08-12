@@ -94,7 +94,7 @@ cd /eic/u/wenauseic/github/swf-testbed && source .venv/bin/activate && source ~/
 
 ### Standardized Agent Pattern
 ```python
-from base_agent import ExampleAgent  # Auto-handles environment setup
+from base_agent import BaseAgent  # Auto-handles environment setup
 # Pure business logic only - no infrastructure sausage-making
 ```
 
