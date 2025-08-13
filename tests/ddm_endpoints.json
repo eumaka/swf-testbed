@@ -1,0 +1,142 @@
+{
+  "E1_BNL_DISK_1": {
+    "aprotocols": {},
+    "arprotocols": {},
+    "cloud": "US",
+    "country": "United States",
+    "country_code": "US",
+    "datapolicies": [
+      "AnalysisData",
+      "Nucleus",
+      "T0Disk",
+      "T0Tape",
+      "T0TaskOutput"
+    ],
+    "endpoint": "",
+    "id": 81,
+    "info_url": "",
+    "is_cache": false,
+    "is_deterministic": true,
+    "is_mkdir": false,
+    "is_staging": false,
+    "is_tape": false,
+    "is_volatile": false,
+    "last_modified": "2025-06-26T18:40:16.782175",
+    "maxpintime": 0,
+    "name": "E1_BNL_DISK_1",
+    "params": {},
+    "phys_groups": [],
+    "quotas": {},
+    "rc": "US-T1-BNL",
+    "rc_accounting": "",
+    "rc_country": "United States",
+    "rc_country_code": "US",
+    "rc_site": "BNL-OSG",
+    "rc_site_state": "ACTIVE",
+    "rcsite": "BNL-OSG",
+    "resource": {
+      "basepath": "",
+      "endpoint": "/pnfs/sdcc.bnl.gov/eic/epic/disk/swf_test_bnl/",
+      "id": 80,
+      "name": "SWFTESTBNLDISK",
+      "service": "SWFTEST_BNL_SE_1"
+    },
+    "rprotocols": {
+      "41": {
+        "activities": [],
+        "basepath": "",
+        "endpoint": "root://dcintdoor.sdcc.bnl.gov:1094",
+        "flavour": "XROOTD",
+        "id": 41,
+        "settings": {}
+      }
+    },
+    "se": null,
+    "se_flavour": null,
+    "servedrestfts": {
+      "TESTING": ""
+    },
+    "site": "BNL-OSG",
+    "site_state": "ACTIVE",
+    "space_method": "storage",
+    "space_usage_url": "",
+    "state": "ACTIVE",
+    "state_comment": "Object was cloned from SWFTEST_BNL_DISK_1 via WebUI",
+    "state_update": "2025-06-26T18:40:16.781839",
+    "status": "",
+    "su": "BNL-PANDA_DISK_1",
+    "tier_level": 1,
+    "token": "SWFTESTBNLDISK",
+    "type": "DATADISK"
+  },
+  "E1_JLAB_DISK_1": {
+    "aprotocols": {},
+    "arprotocols": {},
+    "cloud": "US",
+    "country": "United States",
+    "country_code": "US",
+    "datapolicies": [
+      "AnalysisData",
+      "Nucleus",
+      "T0Disk",
+      "T0Tape",
+      "T0TaskOutput"
+    ],
+    "endpoint": "",
+    "id": 80,
+    "info_url": "",
+    "is_cache": false,
+    "is_deterministic": true,
+    "is_mkdir": false,
+    "is_staging": false,
+    "is_tape": false,
+    "is_volatile": false,
+    "last_modified": "2025-06-26T18:40:59.367124",
+    "maxpintime": 0,
+    "name": "E1_JLAB_DISK_1",
+    "params": {},
+    "phys_groups": [],
+    "quotas": {},
+    "rc": "US-T1-BNL",
+    "rc_accounting": "",
+    "rc_country": "United States",
+    "rc_country_code": "US",
+    "rc_site": "BNL-OSG",
+    "rc_site_state": "ACTIVE",
+    "rcsite": "BNL-OSG",
+    "resource": {
+      "basepath": "",
+      "endpoint": "/pnfs/sdcc.bnl.gov/eic/epic/disk/swf_test_jlab/",
+      "id": 81,
+      "name": "SWFTESTJLABDISK",
+      "service": "SWFTEST_JLAB_SE_1"
+    },
+    "rprotocols": {
+      "42": {
+        "activities": [],
+        "basepath": "",
+        "endpoint": "root://dcintdoor.sdcc.bnl.gov:1094",
+        "flavour": "XROOTD",
+        "id": 42,
+        "settings": {}
+      }
+    },
+    "se": null,
+    "se_flavour": null,
+    "servedrestfts": {
+      "TESTING": ""
+    },
+    "site": "BNL-OSG",
+    "site_state": "ACTIVE",
+    "space_method": "storage",
+    "space_usage_url": "",
+    "state": "ACTIVE",
+    "state_comment": "Object was cloned from BNL_PROD_DISK_1 via WebUI",
+    "state_update": "2025-06-26T18:38:31.941223",
+    "status": "",
+    "su": "BNL-PANDA_DISK_1",
+    "tier_level": 1,
+    "token": "SWFTESTJLABDISK",
+    "type": "DATADISK"
+  }
+}
