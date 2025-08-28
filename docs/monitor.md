@@ -22,12 +22,40 @@ This creates:
 Required environment variables in `~/.env`:
 
 ```bash
-# Monitor URLs for different purposes
+# Monitor URLs for different purposes (development, local Django)
 export SWF_MONITOR_URL=https://localhost:8443      # Authenticated API calls
 export SWF_MONITOR_HTTP_URL=http://localhost:8002  # REST logging (no auth)
 
 # Authentication token for API calls
 export SWF_API_TOKEN=your_token_here
+
+### Production Monitor URL for SSE example
+
+The Remote SSE example agent is intended to connect to the production Apache-hosted monitor only. Set this in your `~/.env` (or rely on the built-in default):
+
+```bash
+# Canonical production monitor base (Apache path-aware)
+export SWF_MONITOR_PROD_URL=https://pandaserver02.sdcc.bnl.gov/swf-monitor
+```
+
+Notes:
+- The example receiver will use `SWF_MONITOR_PROD_URL` if set; otherwise it falls back to the canonical URL above.
+- It does not support the local Django dev server.
+
+### Production SSL trust (required)
+
+Python requests must trust the production monitor certificate chain. Add this to your `~/.env`:
+
+```bash
+# Use the same full chain as production Apache
+export REQUESTS_CA_BUNDLE=/eic/u/wenauseic/github/swf-monitor/full-chain.pem
+# Alternative copy:
+# export REQUESTS_CA_BUNDLE=/eic/u/wenauseic/github/swf-common-lib/config/full-chain.pem
+```
+
+This ensures the receiver can validate the server certificate when calling:
+- `${SWF_MONITOR_PROD_URL}/api/messages/stream/status/`
+- `${SWF_MONITOR_PROD_URL}/api/messages/stream/`
 ```
 
 ## Web Interface Access
@@ -90,6 +118,25 @@ For production, replace with proper certificates.
    - Verify monitor is serving HTTPS on 8443
    - Check agent logs for API call failures
    - Ensure `SWF_MONITOR_URL` points to HTTPS endpoint
+
+## Production SSE Receiver (example_agents)
+
+This example is intended to run only against the production monitor under Apache.
+
+- Required environment variables (can be placed in `~/.env`):
+   - `SWF_API_TOKEN` — DRF token for the API
+   - `SWF_MONITOR_PROD_URL` — Base URL of the production monitor (defaults to `https://pandaserver02.sdcc.bnl.gov/swf-monitor` if not set)
+
+tcsh example:
+
+```tcsh
+setenv SWF_API_TOKEN your_token
+setenv SWF_MONITOR_PROD_URL https://pandaserver02.sdcc.bnl.gov/swf-monitor
+```
+
+The receiver connects to:
+- Stream: `${SWF_MONITOR_PROD_URL}/api/messages/stream/`
+- Status: `${SWF_MONITOR_PROD_URL}/api/messages/stream/status/`
 
 ### Port Configuration Issues
 
