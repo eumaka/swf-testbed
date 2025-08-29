@@ -69,7 +69,7 @@ class DAQSimulator:
         self.agent_type = 'daqsim'
         
         # Monitor API configuration
-        self.monitor_url = os.getenv('SWF_MONITOR_URL', 'https://localhost:8443')
+        self.monitor_url = os.getenv('SWF_MONITOR_URL', 'https://pandaserver02.sdcc.bnl.gov/swf-monitor')
         self.api_token = os.getenv('SWF_API_TOKEN')
         
         # Set up API session
