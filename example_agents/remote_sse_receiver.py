@@ -90,7 +90,8 @@ class RemoteSSEReceiver:
                 # Status precheck
                 print("🔌 Testing SSE endpoint...")
                 # Do not follow redirects; 302 likely indicates auth not reaching Django
-                status_resp = self.session.get(status_url, timeout=20, allow_redirects=False)
+                # The status endpoint is a regular DRF endpoint, not an SSE stream, so override Accept header
+                status_resp = self.session.get(status_url, timeout=20, allow_redirects=False, headers={'Accept': 'application/json'})
                 if status_resp.status_code != 200:
                     if status_resp.status_code in (401, 403):
                         print(f"❌ Auth failed (HTTP {status_resp.status_code}). Check SWF_API_TOKEN (token may be missing/invalid).")
@@ -125,6 +126,11 @@ class RemoteSSEReceiver:
                         print("   Configure 'WSGIPassAuthorization On' and reload Apache.")
                     else:
                         print(f"❌ Failed to open stream: HTTP {response.status_code}")
+                        print("   Response Headers:")
+                        for key, value in response.headers.items():
+                            print(f"     {key}: {value}")
+                        print("   Response Body:")
+                        print(f"     {response.text}")
                     if self.running:
                         print("   Retrying in 15 seconds...")
                         time.sleep(15)
