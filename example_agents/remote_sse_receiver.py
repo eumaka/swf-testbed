@@ -5,6 +5,12 @@ Remote SSE Receiver: Connects to the monitor's SSE stream to receive workflow me
 This script receives real-time workflow messages via Server-Sent Events (SSE)
 from the swf-monitor running under production Apache. It connects to the SSE
 endpoint and logs received messages.
+
+Command-line filtering examples (based on remote_sse_sender.py messages):
+  python remote_sse_receiver.py --message sse_test
+  python remote_sse_receiver.py --message data_ready,processing_complete  
+  python remote_sse_receiver.py --agent sse_sender-agent
+  python remote_sse_receiver.py --message sse_test --agent sse_sender-agent
 """
 
 import os
@@ -12,9 +18,11 @@ import sys
 import time
 import json
 import signal
+import argparse
 from pathlib import Path
 
 import requests
+from swf_common_lib.base_agent import BaseAgent
 
 # Canonical production base URL (can be overridden by SWF_MONITOR_PROD_URL)
 DEFAULT_MONITOR_BASE = "https://pandaserver02.sdcc.bnl.gov/swf-monitor"
@@ -34,26 +42,34 @@ def setup_environment() -> None:
                 os.environ[key.strip()] = value.strip("'\"")
 
 
-class RemoteSSEReceiver:
-    """Production-only SSE client for swf-monitor."""
+class RemoteSSEReceiver(BaseAgent):
+    """Production-only SSE client for swf-monitor that registers as an agent."""
 
-    def __init__(self) -> None:
+    def __init__(self, msg_types=None, agents=None) -> None:
         setup_environment()
 
         # Production monitor base URL (env override, otherwise production default)
         env_url = os.getenv('SWF_MONITOR_PROD_URL')
         if env_url:
-            self.monitor_base = env_url.rstrip('/')
+            monitor_base = env_url.rstrip('/')
         else:
-            self.monitor_base = DEFAULT_MONITOR_BASE
-            print(f"ℹ️  Using default production URL: {self.monitor_base} (override with SWF_MONITOR_PROD_URL)")
+            monitor_base = DEFAULT_MONITOR_BASE
+            print(f"ℹ️  Using default production URL: {monitor_base} (override with SWF_MONITOR_PROD_URL)")
 
-        self.api_token = os.getenv('SWF_API_TOKEN')
-        if not self.api_token:
-            print("❌ Error: SWF_API_TOKEN not set in environment")
-            sys.exit(1)
+        # Override monitor URLs for production
+        os.environ['SWF_MONITOR_URL'] = monitor_base
+        os.environ['SWF_MONITOR_HTTP_URL'] = monitor_base
 
-        self.running = True
+        # Initialize BaseAgent with descriptive type and name
+        super().__init__(agent_type='sse_receiver', subscription_queue='epictopic')
+        
+        # Override agent name if user provided one
+        user_agent_name = os.getenv('SWF_SSE_RECEIVER_NAME')
+        if user_agent_name:
+            self.agent_name = user_agent_name
+        self.monitor_base = monitor_base
+        self.msg_types = msg_types
+        self.agents = agents
 
         # HTTP session: production defaults (verify=True, env proxies honored)
         self.session = requests.Session()
@@ -64,9 +80,9 @@ class RemoteSSEReceiver:
             'Connection': 'keep-alive',
         })
 
-        # Graceful shutdown
-        signal.signal(signal.SIGINT, self._signal_handler)
-        signal.signal(signal.SIGTERM, self._signal_handler)
+        # Simple shutdown - just exit immediately
+        signal.signal(signal.SIGINT, lambda signum, frame: sys.exit(0))
+        signal.signal(signal.SIGTERM, lambda signum, frame: sys.exit(0))
 
         print("🔧 Remote SSE Receiver initialized")
         print(f"   Monitor base: {self.monitor_base}")
@@ -75,17 +91,22 @@ class RemoteSSEReceiver:
         if ca_bundle:
             print(f"   CA bundle:   {ca_bundle}")
 
-    def _signal_handler(self, signum, frame) -> None:
-        print(f"\n📡 Received signal {signum} - shutting down gracefully...")
-        self.running = False
 
     def connect_and_receive(self) -> None:
         """Connect to SSE stream and process messages in a loop."""
+        # Build stream URL with filters
         stream_url = f"{self.monitor_base}/api/messages/stream/"
+        params = []
+        if self.msg_types:
+            params.append(f"msg_types={','.join(self.msg_types)}")
+        if self.agents:
+            params.append(f"agents={','.join(self.agents)}")
+        if params:
+            stream_url += "?" + "&".join(params)
         status_url = f"{self.monitor_base}/api/messages/stream/status/"
         print(f"📡 Connecting to SSE stream: {stream_url}")
 
-        while self.running:
+        while True:
             try:
                 # Status precheck
                 print("🔌 Testing SSE endpoint...")
@@ -105,9 +126,8 @@ class RemoteSSEReceiver:
                         print("   Enable 'WSGIPassAuthorization On' in Apache for the /swf-monitor app and reload Apache.")
                     else:
                         print(f"❌ SSE endpoint not available: HTTP {status_resp.status_code}")
-                    if self.running:
-                        print("   Retrying in 15 seconds...")
-                        time.sleep(15)
+                    print("   Retrying in 15 seconds...")
+                    time.sleep(15)
                     continue
 
                 # Open the SSE stream (blocks quietly while waiting for events)
@@ -131,39 +151,36 @@ class RemoteSSEReceiver:
                             print(f"     {key}: {value}")
                         print("   Response Body:")
                         print(f"     {response.text}")
-                    if self.running:
-                        print("   Retrying in 15 seconds...")
-                        time.sleep(15)
+                    print("   Retrying in 15 seconds...")
+                    time.sleep(15)
                     continue
 
                 print("✅ SSE stream opened - waiting for events... (Ctrl+C to exit)")
+                
+                # Register this SSE receiver as an active agent
+                self.send_heartbeat()
+                
                 print("-" * 60)
                 # streaming until broken or stopped
                 self._process_sse_stream(response)
 
             except requests.exceptions.ReadTimeout as e:
                 print(f"⏱️  Read timeout while waiting for messages: {e}")
-                if self.running:
-                    print("   Reconnecting in 15 seconds...")
-                    time.sleep(15)
+                print("   Reconnecting in 15 seconds...")
+                time.sleep(15)
             except requests.exceptions.RequestException as e:
                 print(f"❌ Connection error: {e}")
-                if self.running:
-                    print("   Retrying in 15 seconds...")
-                    time.sleep(15)
+                print("   Retrying in 15 seconds...")
+                time.sleep(15)
             except Exception as e:
                 print(f"❌ Unexpected error: {e}")
-                if self.running:
-                    time.sleep(15)
+                time.sleep(15)
 
-        print("📡 SSE Receiver shutdown complete")
 
     def _process_sse_stream(self, response) -> None:
         event_buffer = []
         try:
             for line in response.iter_lines(decode_unicode=True, chunk_size=1):
-                if not self.running:
-                    break
                 if line is None:
                     continue
                 line = line.strip()
@@ -211,8 +228,8 @@ class RemoteSSEReceiver:
                 processed_by = data.get('processed_by', 'unknown')
                 run_id = data.get('run_id', 'N/A')
                 print(f"[{timestamp}] 📨 Message received:")
-                print(f"            Type: {msg_type}")
-                print(f"            From: {processed_by}")
+                print(f"         Message: {msg_type}")
+                print(f"           Agent: {processed_by}")
                 print(f"            Run:  {run_id}")
                 if 'message' in data:
                     print(f"            Text: {data['message']}")
@@ -226,8 +243,50 @@ class RemoteSSEReceiver:
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser(
+        description="Remote SSE Receiver: Connect to workflow monitor SSE stream",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  python remote_sse_receiver.py                           # Receive all messages
+  python remote_sse_receiver.py --message stf_gen         # Only STF generation messages
+  python remote_sse_receiver.py --agent daq-simulator     # Only messages from daq-simulator
+  python remote_sse_receiver.py --message stf_gen,data_ready --agent daq-simulator
+
+Environment variables:
+  SWF_SSE_RECEIVER_NAME - Required: descriptive agent name
+  SWF_API_TOKEN         - Required: monitor API token
+  SWF_MONITOR_PROD_URL  - Optional: override monitor URL
+        """)
+    
+    parser.add_argument('--message', '--msg-type', dest='msg_types',
+                        help='Filter by message type(s), comma-separated (e.g., stf_gen,data_ready)')
+    parser.add_argument('--agent', dest='agents', 
+                        help='Filter by agent name(s), comma-separated (e.g., daq-simulator,data-agent)')
+    
+    args = parser.parse_args()
+    
+    # Parse comma-separated values
+    msg_types = None
+    if args.msg_types:
+        msg_types = [t.strip() for t in args.msg_types.split(',')]
+    
+    agents = None
+    if args.agents:
+        agents = [a.strip() for a in args.agents.split(',')]
+    
     try:
-        receiver = RemoteSSEReceiver()
+        receiver = RemoteSSEReceiver(msg_types=msg_types, agents=agents)
+        if msg_types or agents:
+            filters = []
+            if msg_types:
+                filters.append(f"messages: {', '.join(msg_types)}")
+            if agents:
+                filters.append(f"agents: {', '.join(agents)}")
+            print(f"🔍 Filtering enabled - {' | '.join(filters)}")
+        else:
+            print("📬 Receiving all messages (no filtering)")
+        
         receiver.connect_and_receive()
     except KeyboardInterrupt:
         print("\n📡 Received interrupt signal - exiting...")

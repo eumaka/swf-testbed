@@ -26,26 +26,26 @@ class RemoteSSESender(BaseAgent):
         os.environ['SWF_MONITOR_URL'] = prod_base
         os.environ['SWF_MONITOR_HTTP_URL'] = prod_base
 
-        super().__init__(agent_type='SSE_SENDER', subscription_queue='epictopic')
+        super().__init__(agent_type='sse_sender', subscription_queue='epictopic')
         self.logger.info(f"Monitor base set to: {prod_base}")
         self.messages_to_send = [
             {
                 'msg_type': 'sse_test',
-                'processed_by': 'remote-sse-sender',
+                'processed_by': self.agent_name,
                 'run_id': 'test-run-001',
                 'message': 'Hello from SSE sender!',
                 'data': 'This is a test message for SSE demonstration'
             },
             {
                 'msg_type': 'data_ready',
-                'processed_by': 'remote-sse-sender', 
+                'processed_by': self.agent_name, 
                 'run_id': 'test-run-001',
                 'filename': 'test_file_001.dat',
                 'message': 'Simulated data ready event'
             },
             {
                 'msg_type': 'processing_complete',
-                'processed_by': 'remote-sse-sender',
+                'processed_by': self.agent_name,
                 'run_id': 'test-run-001', 
                 'filename': 'test_file_001.dat',
                 'message': 'Simulated processing complete event'
@@ -77,8 +77,13 @@ class RemoteSSESender(BaseAgent):
                             }
                         )
                         self.logger.info("Connected to ActiveMQ")
+                        self.mq_connected = True
+                        
+                        # Register agent with monitor via heartbeat
+                        self.send_heartbeat()
                     except Exception as e:
                         self.logger.error(f"Failed to connect to ActiveMQ: {e}")
+                        self.mq_connected = False
                         time.sleep(2)
                         continue
 

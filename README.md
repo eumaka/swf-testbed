@@ -17,6 +17,7 @@ This document contains mandatory critical thinking requirements, coding rules, a
 ### Operations
 - [**Running the Testbed**](docs/operations.md) - Starting, stopping, and monitoring services
 - [**Monitor Integration**](docs/monitor.md) - Web interface and API usage
+- [**SSE Real-Time Streaming**](docs/sse-streaming.md) - Remote workflow event monitoring via HTTPS
 - [**Production Deployment**](../swf-monitor/docs/PRODUCTION_DEPLOYMENT.md) - Complete Apache production deployment guide
 
 ### Development
