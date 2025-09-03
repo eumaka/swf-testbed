@@ -287,9 +287,7 @@ The Django application will automatically read these values during startup.
    - Check that proxy variables are unset for localhost
 
 4. **Database connection errors:**
-   - Verify PostgreSQL is running
    - Check database credentials in `.env` files
-   - Ensure database exists: `createdb swfdb`
 
 5. **Import errors:**
    ```bash

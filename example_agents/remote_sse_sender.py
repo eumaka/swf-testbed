@@ -60,54 +60,59 @@ class RemoteSSESender(BaseAgent):
         mode = 'one-shot' if oneshot else f'loop every {batch_interval}s'
         self.logger.info(f"Starting Remote SSE Sender ({mode})")
 
-        while True:
-            # Ensure connection (fixed 2s delay on failure)
-            if not self.conn or not self.conn.is_connected():
+        try:
+            while True:
+                # Ensure connection (fixed 2s delay on failure)
+                if not self.conn or not self.conn.is_connected():
+                    try:
+                        self.logger.info("Connecting to ActiveMQ ...")
+                        self.conn.connect(
+                            self.mq_user,
+                            self.mq_password,
+                            wait=True,
+                            version='1.1',
+                            headers={
+                                'client-id': self.agent_name,
+                                'heart-beat': '10000,30000'
+                            }
+                        )
+                        self.logger.info("Connected to ActiveMQ")
+                    except Exception as e:
+                        self.logger.error(f"Failed to connect to ActiveMQ: {e}")
+                        time.sleep(2)
+                        continue
+
+                # Send one batch
+                self.logger.info(f"Sending batch of {len(self.messages_to_send)} messages")
+                for i, message in enumerate(self.messages_to_send, 1):
+                    try:
+                        self.logger.debug(f"Sending message {i}/{len(self.messages_to_send)}: {message['msg_type']}")
+                        self.send_message('epictopic', message)
+                        self.logger.debug(
+                            f"Sent message: {message['msg_type']} run={message.get('run_id','N/A')}"
+                        )
+                        time.sleep(1)
+                    except Exception as e:
+                        self.logger.error(f"Failed to send message {i}: {e}")
+                        # If a message fails to send, the connection might be dead.
+                        # Break the inner loop and let the outer loop try to reconnect.
+                        break
+
+                # Exit in one-shot mode; otherwise sleep and repeat
+                if oneshot:
+                    self.logger.info("Completed one-shot batch; exiting.")
+                    break
+
+                self.logger.info(f"Batch sent. Waiting {batch_interval} seconds.")
+                time.sleep(batch_interval)
+        finally:
+            # Disconnect when the loop is exited (e.g., one-shot mode, Ctrl-C)
+            if self.conn and self.conn.is_connected():
                 try:
-                    self.logger.info("Connecting to ActiveMQ ...")
-                    self.conn.connect(
-                        self.mq_user,
-                        self.mq_password,
-                        wait=True,
-                        version='1.1',
-                        headers={
-                            'client-id': self.agent_name,
-                            'heart-beat': '10000,30000'
-                        }
-                    )
-                    self.logger.info("Connected to ActiveMQ")
-                except Exception as e:
-                    self.logger.error(f"Failed to connect to ActiveMQ: {e}")
-                    time.sleep(2)
-                    continue
-
-            # Send one batch
-            self.logger.info(f"Sending batch of {len(self.messages_to_send)} messages")
-            for i, message in enumerate(self.messages_to_send, 1):
-                try:
-                    self.logger.debug(f"Sending message {i}/{len(self.messages_to_send)}: {message['msg_type']}")
-                    self.send_message('epictopic', message)
-                    self.logger.debug(
-                        f"Sent message: {message['msg_type']} run={message.get('run_id','N/A')}"
-                    )
-                except Exception as e:
-                    self.logger.error(f"Failed to send message {i}: {e}")
-
-                time.sleep(1)
-
-            # Disconnect after batch
-            try:
-                if self.conn and self.conn.is_connected():
                     self.conn.disconnect()
-                    self.logger.info("Disconnected from ActiveMQ (loop)")
-            except Exception:
-                pass
-
-            # Exit in one-shot mode; otherwise sleep and repeat
-            if oneshot:
-                self.logger.info("Completed one-shot batch; exiting.")
-                break
-            time.sleep(batch_interval)
+                    self.logger.info("Disconnected from ActiveMQ")
+                except Exception as e:
+                    self.logger.error(f"Error during disconnect: {e}")
 
 def main():
     """Main entry point."""
