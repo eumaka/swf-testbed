@@ -6,6 +6,8 @@ Real-time workflow message streaming for remote monitoring and visualization via
 
 The SWF Testbed provides real-time streaming of workflow messages to remote clients via REST Server-Sent Events (SSE). This enables distributed agents and external systems to receive live workflow updates without requiring direct ActiveMQ access or complex networking configurations.
 
+**Important**: ActiveMQ message senders require no modifications. ALL messages sent to ActiveMQ are automatically available to SSE clients. Only receiving agents need SSE-specific configuration.
+
 **Key Benefits:**
 - **Firewall-friendly**: Uses standard HTTPS connections 
 - **Real-time**: Sub-second latency for workflow messages
